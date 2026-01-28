@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "DiabEats",
+    "slug": "diabeats",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4285F4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.akung.diabetes"
+    },
+    "android": {
+      "package": "com.akung.diabetes",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ff983458-7ae3-4a3d-bc6c-2aa737359d57"
+      }
+    }
+  }
+}
