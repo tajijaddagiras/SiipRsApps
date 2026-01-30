@@ -157,6 +157,7 @@ app.post('/api/auth/login', async (req, res) => {
 // USER REGISTRATION API
 app.post('/api/auth/register', async (req, res) => {
     const { email, password, name, phone } = req.body;
+    console.log('Registering user:', email); // Debug log
     try {
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
