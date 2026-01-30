@@ -4,10 +4,23 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+
+// In-memory OTP storage (for serverless, consider using database or Redis in production)
+const otpStore = new Map();
+
+// Nodemailer transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -29,6 +42,81 @@ app.get('/api/health', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// SEND OTP API
+app.post('/api/auth/send-otp', async (req, res) => {
+    const { email, context } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email diperlukan' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP with expiry (10 minutes)
+    otpStore.set(email, {
+        code: otp,
+        context: context || 'REGISTER',
+        expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+    });
+
+    const mailOptions = {
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: email,
+        subject: 'Kode Verifikasi SIIP RS ESA UNGGUL',
+        html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #4285F4;">Verifikasi Akun Anda</h2>
+        <p>Halo,</p>
+        <p>Gunakan kode OTP berikut untuk melanjutkan tindakan Anda di SIIP RS ESA UNGGUL:</p>
+        <div style="background-color: #f4f4f4; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4285F4;">${otp}</span>
+        </div>
+        <p>Kode ini berlaku selama 10 menit. Jika Anda tidak merasa melakukan tindakan ini, silakan abaikan email ini.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #777;">Email ini dikirim secara otomatis oleh sistem SIIP RS ESA UNGGUL.</p>
+      </div>
+    `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('OTP sent to:', email);
+        res.json({ message: 'Kode OTP berhasil dikirim ke email Anda' });
+    } catch (error) {
+        console.error('Send OTP Error:', error);
+        res.status(500).json({ message: 'Gagal mengirim kode OTP', error: error.message });
+    }
+});
+
+// VERIFY OTP API
+app.post('/api/auth/verify-otp', async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+        return res.status(400).json({ message: 'Email dan kode OTP diperlukan' });
+    }
+
+    const storedOtp = otpStore.get(email);
+
+    if (!storedOtp) {
+        return res.status(400).json({ message: 'Kode OTP tidak ditemukan. Silakan minta kode baru.' });
+    }
+
+    if (Date.now() > storedOtp.expiresAt) {
+        otpStore.delete(email);
+        return res.status(400).json({ message: 'Kode OTP sudah kedaluwarsa. Silakan minta kode baru.' });
+    }
+
+    if (storedOtp.code !== code) {
+        return res.status(400).json({ message: 'Kode OTP tidak valid' });
+    }
+
+    // OTP valid - remove from store
+    otpStore.delete(email);
+    res.json({ message: 'Verifikasi berhasil', verified: true });
 });
 
 // LOGIN API
