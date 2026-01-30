@@ -47,6 +47,13 @@
   },
   "private": true,
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.8",
+    "@types/multer": "^2.0.1",
+    "@types/node": "^22.13.1",
+    "@types/nodemailer": "^7.0.9",
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2"
   }

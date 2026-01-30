@@ -9,6 +9,7 @@
     "jsx": "react-native",
     "noEmit": true,
     "strict": true,
+    "noImplicitAny": false,
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
