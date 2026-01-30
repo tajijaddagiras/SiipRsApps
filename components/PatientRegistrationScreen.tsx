@@ -208,10 +208,10 @@ const PatientRegistrationScreen: React.FC<PatientRegistrationScreenProps> = ({
                                     >
                                         <Ionicons name="calendar-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
                                         <TextInput
-                                            style={[styles.input, { flex: 1 }]}
+                                            style={[styles.input, { flex: 1, cursor: Platform.OS === 'web' ? 'pointer' : 'auto' }]}
                                             value={dob}
                                             editable={false}
-                                            pointerEvents="none"
+                                            // pointerEvents="none" // REMOVED: potentially blacks interaction on web
                                             placeholder="dd/mm/yyyy"
                                             placeholderTextColor="#94A3B8"
                                         />
@@ -446,6 +446,7 @@ const styles = StyleSheet.create({
         borderColor: '#E2E8F0',
         borderRadius: 12,
         paddingHorizontal: 16,
+        backgroundColor: '#F8FAFC', // Added background color to fix "damaged" look
     },
     inputIcon: {
         marginRight: 12,
