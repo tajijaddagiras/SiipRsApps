@@ -109,78 +109,74 @@ const PatientActionScreen: React.FC<PatientActionScreenProps> = ({
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     style={{ flex: 1 }}
                 >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={{ flex: 1 }}>
-                            <ScrollView
-                                showsVerticalScrollIndicator={false}
-                                contentContainerStyle={styles.scrollContent}
-                                keyboardShouldPersistTaps="handled"
-                            >
-                                {/* Patient Info Card */}
-                                <View style={styles.patientCard}>
-                                    <View style={styles.patientCardHeader}>
-                                        <View style={styles.verifiedBadge}>
-                                            <Text style={styles.verifiedText}>TERVERIFIKASI</Text>
-                                        </View>
-                                        <View style={styles.patientAvatar}>
-                                            <Ionicons name="person" size={24} color="#4285F4" />
-                                        </View>
-                                    </View>
-
-                                    <Text style={styles.patientName}>{patientData?.name || 'Pasien'}</Text>
-                                    <Text style={styles.patientRM}>RM: {patientData?.mrn || '-'}</Text>
-
-                                    <View style={styles.patientDetailsRow}>
-                                        <View style={styles.detailItem}>
-                                            <Text style={styles.detailLabel}>TGL LAHIR</Text>
-                                            <Text style={styles.detailValue}>{patientData?.dob || '-'}</Text>
-                                        </View>
-                                        <View style={styles.detailItem}>
-                                            <Text style={styles.detailLabel}>RUANGAN</Text>
-                                            <Text style={styles.detailValue}>{patientData?.room || '-'}</Text>
-                                        </View>
-                                    </View>
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* Patient Info Card */}
+                        <View style={styles.patientCard}>
+                            <View style={styles.patientCardHeader}>
+                                <View style={styles.verifiedBadge}>
+                                    <Text style={styles.verifiedText}>TERVERIFIKASI</Text>
                                 </View>
-
-                                {/* Procedure Selection */}
-                                <Text style={styles.sectionTitle}>Pilih Prosedur</Text>
-                                <View style={styles.procedureList}>
-                                    {procedures.map((proc) => (
-                                        <TouchableOpacity
-                                            key={proc.id}
-                                            style={[
-                                                styles.procedureCard,
-                                                selectedProcedure === proc.id && styles.procedureCardSelected
-                                            ]}
-                                            onPress={() => setSelectedProcedure(proc.id)}
-                                        >
-                                            <View style={[styles.iconBox, { backgroundColor: proc.bgColor }]}>
-                                                {proc.icon}
-                                            </View>
-                                            <Text style={styles.procedureTitle}>{proc.title}</Text>
-                                            <View style={styles.radioOuter}>
-                                                {selectedProcedure === proc.id && <View style={styles.radioInner} />}
-                                            </View>
-                                        </TouchableOpacity>
-                                    ))}
+                                <View style={styles.patientAvatar}>
+                                    <Ionicons name="person" size={24} color="#4285F4" />
                                 </View>
+                            </View>
 
-                                {/* Staff Notes */}
-                                <Text style={styles.notesLabel}>CATATAN PETUGAS</Text>
-                                <View style={styles.notesWrapper}>
-                                    <TextInput
-                                        style={styles.notesInput}
-                                        placeholder="Tulis detail tindakan..."
-                                        placeholderTextColor="#CBD5E1"
-                                        multiline
-                                        textAlignVertical="top"
-                                        value={notes}
-                                        onChangeText={setNotes}
-                                    />
+                            <Text style={styles.patientName}>{patientData?.name || 'Pasien'}</Text>
+                            <Text style={styles.patientRM}>RM: {patientData?.mrn || '-'}</Text>
+
+                            <View style={styles.patientDetailsRow}>
+                                <View style={styles.detailItem}>
+                                    <Text style={styles.detailLabel}>TGL LAHIR</Text>
+                                    <Text style={styles.detailValue}>{patientData?.dob || '-'}</Text>
                                 </View>
-                            </ScrollView>
+                                <View style={styles.detailItem}>
+                                    <Text style={styles.detailLabel}>RUANGAN</Text>
+                                    <Text style={styles.detailValue}>{patientData?.room || '-'}</Text>
+                                </View>
+                            </View>
                         </View>
-                    </TouchableWithoutFeedback>
+
+                        {/* Procedure Selection */}
+                        <Text style={styles.sectionTitle}>Pilih Prosedur</Text>
+                        <View style={styles.procedureList}>
+                            {procedures.map((proc) => (
+                                <TouchableOpacity
+                                    key={proc.id}
+                                    style={[
+                                        styles.procedureCard,
+                                        selectedProcedure === proc.id && styles.procedureCardSelected
+                                    ]}
+                                    onPress={() => setSelectedProcedure(proc.id)}
+                                >
+                                    <View style={[styles.iconBox, { backgroundColor: proc.bgColor }]}>
+                                        {proc.icon}
+                                    </View>
+                                    <Text style={styles.procedureTitle}>{proc.title}</Text>
+                                    <View style={styles.radioOuter}>
+                                        {selectedProcedure === proc.id && <View style={styles.radioInner} />}
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Staff Notes */}
+                        <Text style={styles.notesLabel}>CATATAN PETUGAS</Text>
+                        <View style={styles.notesWrapper}>
+                            <TextInput
+                                style={styles.notesInput}
+                                placeholder="Tulis detail tindakan..."
+                                placeholderTextColor="#CBD5E1"
+                                multiline
+                                textAlignVertical="top"
+                                value={notes}
+                                onChangeText={setNotes}
+                            />
+                        </View>
+                    </ScrollView>
                 </KeyboardAvoidingView>
 
                 {/* Footer Button (Outside KeyboardAvoidingView for Android) */}
@@ -205,8 +201,8 @@ const PatientActionScreen: React.FC<PatientActionScreenProps> = ({
                         </View>
                     </View>
                 </Modal>
-            </SafeAreaView>
-        </Animated.View>
+            </SafeAreaView >
+        </Animated.View >
     );
 };
 
@@ -394,10 +390,16 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     notesInput: {
-        fontSize: 15,
+        fontSize: 16,
         color: '#1E293B',
-        fontWeight: '500',
+        fontWeight: '600',
         height: '100%',
+        textAlignVertical: 'top',
+        ...Platform.select({
+            web: {
+                outlineStyle: 'none',
+            }
+        }) as any,
     },
     footer: {
         padding: 20,
