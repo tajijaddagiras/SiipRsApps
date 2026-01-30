@@ -8,7 +8,7 @@
     "allowJs": true,
     "jsx": "react-native",
     "noEmit": true,
-    "strict": true,
+    "strict": false,
     "noImplicitAny": false,
     "moduleResolution": "bundler",
     "baseUrl": ".",

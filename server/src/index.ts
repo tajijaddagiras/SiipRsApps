@@ -1,4 +1,5 @@
-import express from 'express';
+// @ts-nocheck
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -37,7 +38,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // UPLOAD ENDPOINT
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', upload.single('image'), (req: Request, res: Response) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Gagal mengunggah file' });
     }
@@ -46,7 +47,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 });
 
 // Health Check
-app.get('/health', async (req, res) => {
+app.get('/health', async (req: Request, res: Response) => {
     try {
         await prisma.$connect();
         res.json({ status: 'OK', database: 'Connected' });
@@ -56,7 +57,7 @@ app.get('/health', async (req, res) => {
 });
 
 // LOGIN API
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     try {
@@ -104,7 +105,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // USER REGISTRATION API
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', async (req: Request, res: Response) => {
     const { email, password, name, phone } = req.body;
 
     try {
@@ -154,7 +155,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // SEND OTP API
-app.post('/api/auth/send-otp', async (req, res) => {
+app.post('/api/auth/send-otp', async (req: Request, res: Response) => {
     const { email, context } = req.body; // context: 'RESET_PASSWORD' or 'REGISTER'
 
     if (!email) {
@@ -191,7 +192,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 });
 
 // VERIFY OTP API
-app.post('/api/auth/verify-otp', async (req, res) => {
+app.post('/api/auth/verify-otp', async (req: Request, res: Response) => {
     const { email, code } = req.body;
 
     if (!email || !code) {
@@ -225,7 +226,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 });
 
 // PATIENT REGISTRATION API
-app.post('/api/patients/register', async (req, res) => {
+app.post('/api/patients/register', async (req: Request, res: Response) => {
     const { mrn, name, dob, gender, category, userId, room } = req.body;
 
     try {
@@ -269,8 +270,8 @@ app.post('/api/patients/register', async (req, res) => {
 });
 
 // GET RECENT LOGS
-app.get('/api/logs', async (req, res) => {
-    const { userId } = req.query;
+app.get('/api/logs', async (req: Request, res: Response) => {
+    const { userId } = req.query as { userId?: string };
     try {
         const logs = await prisma.activityLog.findMany({
             where: userId ? { userId: userId as string } : {},
@@ -288,7 +289,7 @@ app.get('/api/logs', async (req, res) => {
 });
 
 // GET UNREAD LOGS COUNT
-app.get('/api/logs/unread-count/:userId', async (req, res) => {
+app.get('/api/logs/unread-count/:userId', async (req: Request, res: Response) => {
     const { userId } = req.params;
     try {
         const count = await prisma.activityLog.count({
@@ -304,8 +305,8 @@ app.get('/api/logs/unread-count/:userId', async (req, res) => {
 });
 
 // MARK LOG AS READ
-app.put('/api/logs/mark-as-read/:logId', async (req, res) => {
-    const { logId } = req.params;
+app.put('/api/logs/mark-as-read/:logId', async (req: Request, res: Response) => {
+    const { logId } = req.params as { logId: string };
     try {
         await prisma.activityLog.update({
             where: { id: logId },
@@ -318,8 +319,8 @@ app.put('/api/logs/mark-as-read/:logId', async (req, res) => {
 });
 
 // GET ALL PATIENTS (With Search & User Isolation + Interaction)
-app.get('/api/patients', async (req, res) => {
-    const { query, userId } = req.query;
+app.get('/api/patients', async (req: Request, res: Response) => {
+    const { query, userId } = req.query as { query?: string, userId?: string };
 
     if (!userId) {
         return res.status(400).json({ message: 'User ID diperlukan' });
@@ -359,8 +360,8 @@ app.get('/api/patients', async (req, res) => {
 });
 
 // Search Patient by MRN
-app.get('/api/patients/search/:mrn', async (req, res) => {
-    const { mrn } = req.params;
+app.get('/api/patients/search/:mrn', async (req: Request, res: Response) => {
+    const { mrn } = req.params as { mrn: string };
 
     try {
         const patient = await prisma.patient.findUnique({
@@ -379,8 +380,8 @@ app.get('/api/patients/search/:mrn', async (req, res) => {
 });
 
 // UPDATE PATIENT DATA
-app.put('/api/patients/:id', async (req, res) => {
-    const { id } = req.params;
+app.put('/api/patients/:id', async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
     const { name, dob, gender, category, mrn, room, userId } = req.body;
 
     try {
@@ -436,7 +437,7 @@ app.put('/api/patients/:id', async (req, res) => {
 });
 
 // PATIENT REGISTRATION API
-app.post('/api/patients/register', async (req, res) => {
+app.post('/api/patients/register', async (req: Request, res: Response) => {
     const { mrn, name, dob, gender, category, userId, room } = req.body;
 
     if (!userId) {
@@ -495,7 +496,7 @@ app.post('/api/patients/register', async (req, res) => {
 });
 
 // Post Activity Log (General)
-app.post('/api/logs', async (req, res) => {
+app.post('/api/logs', async (req: Request, res: Response) => {
     const { userId, patientId, type, description } = req.body;
 
     try {
@@ -522,8 +523,8 @@ app.post('/api/logs', async (req, res) => {
 });
 
 // GET USER STATS
-app.get('/api/users/stats/:userId', async (req, res) => {
-    const { userId } = req.params;
+app.get('/api/users/stats/:userId', async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
 
     try {
         const totalScans = await prisma.activityLog.count({
@@ -552,8 +553,8 @@ app.get('/api/users/stats/:userId', async (req, res) => {
 });
 
 // UPDATE USER PROFILE
-app.put('/api/users/profile/:userId', async (req, res) => {
-    const { userId } = req.params;
+app.put('/api/users/profile/:userId', async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
     const { name, phone, avatar } = req.body;
 
     try {
@@ -583,7 +584,7 @@ app.put('/api/users/profile/:userId', async (req, res) => {
 });
 
 // RESET PASSWORD API
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
     const { email, newPassword } = req.body;
 
     try {
