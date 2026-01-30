@@ -7,13 +7,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { sendOTPEmail } from './utils/mailer.js';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Compatible with both ESM and CJS environments
+const __dirname = typeof import.meta !== 'undefined' && import.meta.url
+    ? path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'))
+    : process.cwd();
 
 const app = express();
 const prisma = new PrismaClient();
@@ -22,7 +23,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Multer Config
 const storage = multer.diskStorage({
