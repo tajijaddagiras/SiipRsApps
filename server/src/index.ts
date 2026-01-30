@@ -47,12 +47,13 @@ app.post('/api/upload', upload.single('image'), (req: Request, res: Response) =>
 });
 
 // Health Check
-app.get('/health', async (req: Request, res: Response) => {
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         await prisma.$connect();
-        res.json({ status: 'OK', database: 'Connected' });
+        res.json({ status: 'OK', database: 'Connected', environment: process.env.NODE_ENV });
     } catch (error) {
-        res.status(500).json({ status: 'Error', message: 'Database Connection Failed' });
+        console.error('Health Check Error:', error);
+        res.status(500).json({ status: 'Error', message: 'Database Connection Failed', error: (error as any).message });
     }
 });
 
