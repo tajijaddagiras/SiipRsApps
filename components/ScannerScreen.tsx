@@ -35,8 +35,13 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
     const [webPermissionGranted, setWebPermissionGranted] = useState(false);
     const [flashlight, setFlashlight] = useState(false);
     const [scanned, setScanned] = useState(false);
+    const [facing, setFacing] = useState<any>(Platform.OS === 'web' ? 'front' : 'back');
     const [loading, setLoading] = useState(false);
     const scanLineAnim = useRef(new Animated.Value(0)).current;
+
+    const toggleCameraFacing = () => {
+        setFacing((current: any) => (current === 'back' ? 'front' : 'back'));
+    };
 
     const requestWebPermission = async () => {
         if (Platform.OS === 'web') {
@@ -148,7 +153,7 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
             {(showScanner && isGranted) && (
                 <CameraView
                     style={[StyleSheet.absoluteFill, styles.camera]}
-                    facing={Platform.OS === 'web' ? 'front' : 'back'}
+                    facing={facing}
                     enableTorch={flashlight}
                     barcodeScannerSettings={{
                         barcodeTypes: [
@@ -221,6 +226,12 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
                 <View style={styles.topControls}>
                     <TouchableOpacity style={styles.iconButton} onPress={onClose}>
                         <Ionicons name="close" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.iconButton, { marginLeft: 16 }]}
+                        onPress={toggleCameraFacing}
+                    >
+                        <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.iconButton, flashlight && { backgroundColor: '#FACC15' }]}
