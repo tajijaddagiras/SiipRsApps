@@ -10,9 +10,6 @@ const app = express();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
-// In-memory OTP storage (for serverless, consider using database or Redis in production)
-const otpStore = new Map();
-
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -55,12 +52,23 @@ app.post('/api/auth/send-otp', async (req, res) => {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store OTP with expiry (10 minutes)
-    otpStore.set(email, {
-        code: otp,
-        context: context || 'REGISTER',
-        expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
-    });
+    // Store OTP in Database (Persistent across serverless invocations)
+    try {
+        // Delete existing OTPs for this email to keep it clean
+        await prisma.oTP.deleteMany({ where: { email } });
+
+        await prisma.oTP.create({
+            data: {
+                email,
+                code: otp,
+                context: context || 'REGISTER',
+                expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+            }
+        });
+    } catch (dbError) {
+        console.error('Database OTP Error:', dbError);
+        return res.status(500).json({ message: 'Gagal menyimpan kode OTP', error: dbError.message });
+    }
 
     const mailOptions = {
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -99,24 +107,33 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         return res.status(400).json({ message: 'Email dan kode OTP diperlukan' });
     }
 
-    const storedOtp = otpStore.get(email);
+    try {
+        // Find newest OTP for this email
+        const storedOtp = await prisma.oTP.findFirst({
+            where: { email },
+            orderBy: { createdAt: 'desc' }
+        });
 
-    if (!storedOtp) {
-        return res.status(400).json({ message: 'Kode OTP tidak ditemukan. Silakan minta kode baru.' });
+        if (!storedOtp) {
+            return res.status(400).json({ message: 'Kode OTP tidak ditemukan. Silakan minta kode baru.' });
+        }
+
+        if (new Date() > storedOtp.expiresAt) {
+            await prisma.oTP.delete({ where: { id: storedOtp.id } });
+            return res.status(400).json({ message: 'Kode OTP sudah kedaluwarsa. Silakan minta kode baru.' });
+        }
+
+        if (storedOtp.code !== code) {
+            return res.status(400).json({ message: 'Kode OTP tidak valid' });
+        }
+
+        // OTP valid - remove usage
+        await prisma.oTP.deleteMany({ where: { email } });
+        res.json({ message: 'Verifikasi berhasil', verified: true });
+    } catch (error) {
+        console.error('Verify OTP Error:', error);
+        res.status(500).json({ message: 'Gagal memverifikasi OTP', error: error.message });
     }
-
-    if (Date.now() > storedOtp.expiresAt) {
-        otpStore.delete(email);
-        return res.status(400).json({ message: 'Kode OTP sudah kedaluwarsa. Silakan minta kode baru.' });
-    }
-
-    if (storedOtp.code !== code) {
-        return res.status(400).json({ message: 'Kode OTP tidak valid' });
-    }
-
-    // OTP valid - remove from store
-    otpStore.delete(email);
-    res.json({ message: 'Verifikasi berhasil', verified: true });
 });
 
 // LOGIN API
