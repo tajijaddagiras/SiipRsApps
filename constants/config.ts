@@ -13,7 +13,7 @@ const getBaseUrl = () => {
     }
 
     // Fallback untuk mobile produksi (jika ada)
-    return 'https://siip-rs-esaunggul.vercel.app/api';
+    return 'https://siiprsesaunggul.vercel.app/api';
 };
 
 export const BASE_URL = getBaseUrl();
