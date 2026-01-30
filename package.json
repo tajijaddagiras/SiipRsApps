@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "dev": "start cmd /k \"cd server && npm run dev\" && npx expo start",
     "postinstall": "prisma generate --schema=server/database/schema.prisma",
-    "build": "npx expo export --platform web"
+    "build": "prisma generate --schema=server/database/schema.prisma && npx expo export --platform web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
