@@ -71,8 +71,8 @@ const PatientListScreen: React.FC<PatientListScreenProps> = ({ onBack, onPatient
 
         try {
             const url = query
-                ? `${BASE_URL}/api/patients?userId=${userId}&query=${encodeURIComponent(query)}`
-                : `${BASE_URL}/api/patients?userId=${userId}`;
+                ? `${BASE_URL}/patients?userId=${userId}&query=${encodeURIComponent(query)}`
+                : `${BASE_URL}/patients?userId=${userId}`;
 
             const response = await fetch(url);
             const data = await response.json();

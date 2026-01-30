@@ -127,7 +127,7 @@ const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
 
         setSaving(true);
         try {
-            const response = await fetch(`${BASE_URL}/api/patients/${patient.id}`, {
+            const response = await fetch(`${BASE_URL}/patients/${patient.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

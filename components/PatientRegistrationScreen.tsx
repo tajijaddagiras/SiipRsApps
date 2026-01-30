@@ -81,7 +81,7 @@ const PatientRegistrationScreen: React.FC<PatientRegistrationScreenProps> = ({
         }
 
         try {
-            const response = await fetch(`${BASE_URL}/api/patients/register`, {
+            const response = await fetch(`${BASE_URL}/patients/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

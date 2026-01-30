@@ -110,7 +110,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
         } as any);
 
         try {
-            const response = await fetch(`${BASE_URL}/api/upload`, {
+            const response = await fetch(`${BASE_URL}/upload`, {
                 method: 'POST',
                 body: formData,
                 headers: {

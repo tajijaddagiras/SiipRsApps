@@ -46,7 +46,7 @@ const ManualInputScreen: React.FC<ManualInputScreenProps> = ({
 
         setLoading(true);
         try {
-            const response = await fetch(`${BASE_URL}/api/patients/search/${rekamMedis}`);
+            const response = await fetch(`${BASE_URL}/patients/search/${rekamMedis}`);
             const data = await response.json();
 
             if (response.ok) {

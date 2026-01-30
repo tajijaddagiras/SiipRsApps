@@ -58,7 +58,7 @@ const PatientActionScreen: React.FC<PatientActionScreenProps> = ({
         const procedure = procedures.find(p => p.id === selectedProcedure);
 
         try {
-            const response = await fetch(`${BASE_URL}/api/logs`, {
+            const response = await fetch(`${BASE_URL}/logs`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

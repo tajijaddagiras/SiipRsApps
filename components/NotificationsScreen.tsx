@@ -34,7 +34,7 @@ const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
         if (!log.isRead && userId) {
             try {
                 // Call API to mark as read
-                await fetch(`${BASE_URL}/api/logs/mark-as-read/${log.id}`, {
+                await fetch(`${BASE_URL}/logs/mark-as-read/${log.id}`, {
                     method: 'PUT'
                 });
                 // Trigger refresh in parent

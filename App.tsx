@@ -312,7 +312,7 @@ export default function App() {
     const fetchLogs = async () => {
         if (!user?.id) return;
         try {
-            const response = await fetch(`${BASE_URL}/api/logs?userId=${user.id}`);
+            const response = await fetch(`${BASE_URL}/logs?userId=${user.id}`);
             const data = await response.json();
             if (response.ok) {
                 setLogs(data);
@@ -325,7 +325,7 @@ export default function App() {
     const fetchStats = async () => {
         if (!user?.id) return;
         try {
-            const response = await fetch(`${BASE_URL}/api/users/stats/${user.id}`);
+            const response = await fetch(`${BASE_URL}/users/stats/${user.id}`);
             const data = await response.json();
             if (response.ok) {
                 setStats(data);
@@ -338,7 +338,7 @@ export default function App() {
     const fetchUnreadCount = async () => {
         if (!user?.id) return;
         try {
-            const response = await fetch(`${BASE_URL}/api/logs/unread-count/${user.id}`);
+            const response = await fetch(`${BASE_URL}/logs/unread-count/${user.id}`);
             const data = await response.json();
             setUnreadCount(data.count || 0);
         } catch (error) {
@@ -377,7 +377,7 @@ export default function App() {
         }
 
         try {
-            const response = await fetch(`${BASE_URL}/api/auth/login`, {
+            const response = await fetch(`${BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -449,7 +449,7 @@ export default function App() {
 
         try {
             setOtpContext('register');
-            const response = await fetch(`${BASE_URL}/api/auth/send-otp`, {
+            const response = await fetch(`${BASE_URL}/auth/send-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: regEmail, context: 'REGISTER' }),
@@ -481,7 +481,7 @@ export default function App() {
     // Function to perform the actual registration after OTP is verified
     const executeRegister = async () => {
         try {
-            const response = await fetch(`${BASE_URL}/api/auth/register`, {
+            const response = await fetch(`${BASE_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -568,7 +568,7 @@ export default function App() {
         const targetEmail = otpContext === 'forgot' ? email : user?.email;
 
         try {
-            const response = await fetch(`${BASE_URL}/api/auth/send-otp`, {
+            const response = await fetch(`${BASE_URL}/auth/send-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: targetEmail, context: otpContext === 'forgot' ? 'RESET_PASSWORD' : 'UPDATE_PASSWORD' }),
@@ -619,7 +619,7 @@ export default function App() {
         } else {
             // Update context: SAVE PASSWORD FIRST then Go to success
             try {
-                const response = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+                const response = await fetch(`${BASE_URL}/auth/reset-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: user?.email, newPassword: newPass }),
@@ -679,7 +679,7 @@ export default function App() {
         try {
             const targetEmail = otpContext === 'forgot' ? email : user?.email;
 
-            const response = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+            const response = await fetch(`${BASE_URL}/auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: targetEmail, newPassword: newPass }),
@@ -969,7 +969,7 @@ export default function App() {
     const handleUpdateProfile = async (updatedData: any) => {
         if (!user?.id) return;
         try {
-            const response = await fetch(`${BASE_URL}/api/users/profile/${user.id}`, {
+            const response = await fetch(`${BASE_URL}/users/profile/${user.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1105,7 +1105,7 @@ export default function App() {
             }
 
             try {
-                const response = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
+                const response = await fetch(`${BASE_URL}/auth/verify-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: targetEmail, code: cleanText }),
