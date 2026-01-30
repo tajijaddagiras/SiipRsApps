@@ -8,7 +8,8 @@ import {
     Dimensions,
     ScrollView,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    Platform
 } from 'react-native';
 import { useRef, useState } from 'react';
 import { Image } from 'expo-image';
@@ -46,6 +47,7 @@ const RegistrationSuccessScreen: React.FC<RegistrationSuccessScreenProps> = ({
     patientData
 }) => {
     const viewShotRef = useRef<any>(null);
+    const cardRef = useRef<any>(null);
     const [downloading, setDownloading] = useState(false);
 
     const handleDownload = async () => {
@@ -53,28 +55,49 @@ const RegistrationSuccessScreen: React.FC<RegistrationSuccessScreenProps> = ({
         setDownloading(true);
 
         try {
+            console.log('Download initiated. Platform:', Platform.OS);
             // Capture the view
+            console.log('Starting captureRef...');
             const uri = await captureRef(viewShotRef, {
                 format: 'png',
                 quality: 1,
+                result: 'data-uri', // Ensure we get base64 string
             });
+            console.log('CaptureRef success. URI length:', uri?.length);
+            console.log('URI prefix:', uri?.substring(0, 50));
 
-            // Check if sharing is available
-            if (!(await Sharing.isAvailableAsync())) {
-                Alert.alert('Gagal', 'Fitur berbagi tidak tersedia di perangkat ini.');
-                setDownloading(false);
-                return;
+            // Platform specific download logic
+            if (Platform.OS === 'web') {
+                // Create a temporary anchor element for download
+                // @ts-ignore
+                const link = document.createElement('a');
+                link.href = uri;
+                link.download = `kartu-pasien-${patientData.mrn}.png`;
+                // @ts-ignore
+                document.body.appendChild(link);
+                link.click();
+                // @ts-ignore
+                document.body.removeChild(link);
+
+                // Close after download on web
+                onClose();
+            } else {
+                // Mobile Sharing Logic
+                if (!(await Sharing.isAvailableAsync())) {
+                    Alert.alert('Gagal', 'Fitur berbagi tidak tersedia di perangkat ini.');
+                    setDownloading(false);
+                    return;
+                }
+
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'image/png',
+                    dialogTitle: 'Simpan Kartu Pendaftaran',
+                    UTI: 'public.png'
+                });
+
+                // Auto-navigate back on mobile
+                onClose();
             }
-
-            // Share the file (this allows saving to gallery via the system share sheet)
-            await Sharing.shareAsync(uri, {
-                mimeType: 'image/png',
-                dialogTitle: 'Simpan Kartu Pendaftaran',
-                UTI: 'public.png'
-            });
-
-            // Auto-navigate back to home
-            onClose();
 
         } catch (error) {
             console.error('Download error:', error);
@@ -191,7 +214,7 @@ const RegistrationSuccessScreen: React.FC<RegistrationSuccessScreenProps> = ({
 
                     {/* QR Code Pass Section */}
                     <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }}>
-                        <View style={styles.passCard}>
+                        <View ref={cardRef} collapsable={false} style={styles.passCard}>
                             <View style={styles.passBlueIndicator} />
                             <View style={styles.passContent}>
                                 <View style={styles.passTextSection}>

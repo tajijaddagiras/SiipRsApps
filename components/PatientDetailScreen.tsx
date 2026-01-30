@@ -41,6 +41,7 @@ const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
     onUpdateSuccess
 }) => {
     const viewShotRef = useRef<any>(null);
+    const cardRef = useRef<any>(null);
     const [downloading, setDownloading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -92,25 +93,55 @@ const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
         setDownloading(true);
 
         try {
-            const uri = await captureRef(viewShotRef, {
-                format: 'png',
-                quality: 1,
-            });
+            if (Platform.OS === 'web') {
+                try {
+                    const html2canvas = require('html2canvas');
+                    if (cardRef.current) {
+                        const canvas = await html2canvas(cardRef.current, {
+                            backgroundColor: '#ffffff',
+                            scale: 2
+                        });
+                        const data = canvas.toDataURL('image/png');
 
-            if (!(await Sharing.isAvailableAsync())) {
-                Alert.alert('Gagal', 'Fitur berbagi tidak tersedia di perangkat ini.');
-                setDownloading(false);
-                return;
+                        // Access document safely via window for TS
+                        // @ts-ignore
+                        const dom = typeof document !== 'undefined' ? document : null;
+                        if (dom) {
+                            const link = dom.createElement('a');
+                            link.href = data;
+                            link.download = `barcode-pasien-${patient.mrn}.png`;
+                            dom.body.appendChild(link);
+                            link.click();
+                            dom.body.removeChild(link);
+                        }
+                    } else {
+                        throw new Error('Card ref is null');
+                    }
+                } catch (e) {
+                    console.error('Web capture failed:', e);
+                    Alert.alert('Gagal', 'Terjadi kesalahan saat menyimpan barcode di web.');
+                }
+            } else {
+                // Mobile capture
+                const uri = await captureRef(viewShotRef, {
+                    format: 'png',
+                    quality: 1,
+                    result: 'data-uri',
+                });
+
+                // Mobile Sharing Logic
+                if (!(await Sharing.isAvailableAsync())) {
+                    Alert.alert('Gagal', 'Fitur berbagi tidak tersedia di perangkat ini.');
+                    setDownloading(false);
+                    return;
+                }
+
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'image/png',
+                    dialogTitle: 'Simpan Barcode Pasien',
+                    UTI: 'public.png'
+                });
             }
-
-            await Sharing.shareAsync(uri, {
-                mimeType: 'image/png',
-                dialogTitle: 'Simpan Barcode Pasien',
-                UTI: 'public.png'
-            });
-
-            onClose();
-
         } catch (error) {
             console.error('Download error:', error);
             Alert.alert('Gagal', 'Terjadi kesalahan saat memproses barcode.');
@@ -338,7 +369,7 @@ const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     {/* QR Card */}
                     {!isEditing && (
                         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }}>
-                            <View style={styles.qrCard}>
+                            <View ref={cardRef} collapsable={false} style={styles.qrCard}>
                                 <View style={styles.qrCardLeftLine} />
                                 <View style={styles.qrCardContent}>
                                     <View style={styles.qrInfo}>
