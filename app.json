@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "DiabEats",
-    "slug": "diabeats",
+    "name": "SIIP-RS",
+    "slug": "siip-rs",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.akung.diabetes"
+      "bundleIdentifier": "com.girassentosa.siiprs"
     },
     "android": {
-      "package": "com.akung.diabetes",
+      "package": "com.girassentosa.siiprs",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
