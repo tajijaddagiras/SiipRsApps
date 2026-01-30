@@ -32,10 +32,30 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
     onCapture
 }) => {
     const [permission, requestPermission] = useCameraPermissions();
+    const [webPermissionGranted, setWebPermissionGranted] = useState(false);
     const [flashlight, setFlashlight] = useState(false);
     const [scanned, setScanned] = useState(false);
     const [loading, setLoading] = useState(false);
     const scanLineAnim = useRef(new Animated.Value(0)).current;
+
+    const requestWebPermission = async () => {
+        if (Platform.OS === 'web') {
+            try {
+                // Request stream to trigger browser prompt
+                // @ts-ignore
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // If successful, we have permission. Stop stream so CameraView can take over.
+                stream.getTracks().forEach((track: any) => track.stop());
+                setWebPermissionGranted(true);
+            } catch (err) {
+                console.error("Web permission error:", err);
+                Alert.alert("Akses Ditolak", "Browser tidak mengizinkan akses kamera. Mohon cek setting browser Anda.");
+            }
+        } else {
+            // Mobile fallback
+            requestPermission();
+        }
+    };
 
     useEffect(() => {
         if (showScanner) {
@@ -43,6 +63,12 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
             if (!permission || !permission.granted) {
                 requestPermission();
             }
+
+            console.log('Scanner State:', {
+                granted: permission?.granted,
+                canAskAgain: permission?.canAskAgain,
+                status: permission?.status
+            });
 
             Animated.loop(
                 Animated.sequence([
@@ -69,7 +95,7 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
     });
 
     // Handle initial permission state
-    if (showScanner && !permission) {
+    if (showScanner && !permission && !webPermissionGranted) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#FACC15" />
@@ -77,22 +103,38 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
         );
     }
 
-    // Handle denied permission
-    if (showScanner && !permission?.granted) {
+    // Handle undetermined permission (Need user gesture on Web)
+    if (showScanner && !permission?.granted && !webPermissionGranted && permission?.canAskAgain) {
         return (
             <Animated.View style={[styles.overlay, { opacity: scannerOpacity, justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
                 <Ionicons name="camera-outline" size={80} color="#FACC15" style={{ marginBottom: 20 }} />
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 10 }}>Akses Kamera Ditolak</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 30 }}>Kami membutuhkan izin kamera Anda untuk memindai gelang pasien.</Text>
-                <TouchableOpacity style={styles.shutterInner} onPress={requestPermission}>
-                    <Text style={{ fontWeight: '900', color: '#1E293B' }}>BERI IZIN</Text>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 10 }}>Izin Kamera Diperlukan</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 30 }}>Klik tombol di bawah untuk mengaktifkan kamera laptop/HP Anda.</Text>
+                <TouchableOpacity style={styles.shutterInner} onPress={requestWebPermission}>
+                    <Text style={{ fontWeight: '900', color: '#1E293B' }}>AKTIFKAN</Text>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
+                    <Text style={{ color: '#fff', fontWeight: '600' }}>BATAL</Text>
+                </TouchableOpacity>
+            </Animated.View>
+        );
+    }
+
+    // Handle explicitly denied permission
+    if (showScanner && !permission?.granted && !webPermissionGranted && !permission?.canAskAgain) {
+        return (
+            <Animated.View style={[styles.overlay, { opacity: scannerOpacity, justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
+                <Ionicons name="warning-outline" size={80} color="#EF4444" style={{ marginBottom: 20 }} />
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 10 }}>Akses Kamera Ditolak</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 30 }}>Anda telah menolak akses kamera. Mohon izinkan melalui pengaturan browser/HP Anda.</Text>
                 <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
                     <Text style={{ color: '#fff', fontWeight: '600' }}>KEMBALI</Text>
                 </TouchableOpacity>
             </Animated.View>
         );
     }
+
+    const isGranted = permission?.granted || (Platform.OS === 'web' && webPermissionGranted);
 
     return (
         <Animated.View
@@ -102,12 +144,28 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
                 { opacity: scannerOpacity }
             ]}
         >
-            {/* Real Camera View - No children to avoid warning */}
-            {(showScanner && permission?.granted) && (
+            {/* Real Camera View */}
+            {(showScanner && isGranted) && (
                 <CameraView
-                    style={StyleSheet.absoluteFill}
-                    facing="back"
+                    style={[StyleSheet.absoluteFill, styles.camera]}
+                    facing={Platform.OS === 'web' ? 'front' : 'back'}
                     enableTorch={flashlight}
+                    barcodeScannerSettings={{
+                        barcodeTypes: [
+                            "qr",
+                            "ean13",
+                            "ean8",
+                            "code128",
+                            "code39",
+                            "upc_e",
+                            "upc_a",
+                            "aztec",
+                            "datamatrix",
+                            "pdf417",
+                            "itf14",
+                            "codabar"
+                        ],
+                    }}
                     onBarcodeScanned={scanned ? undefined : async ({ data }) => {
                         setScanned(true);
                         setLoading(true);
@@ -181,17 +239,13 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
 
                 {/* Center Text */}
                 <View style={styles.instructionContainer}>
-                    <Text style={styles.instructionText}>ARAHKAN KEGELANG PASIEN</Text>
+                    <Text style={styles.instructionText}>ARAHKAN KE BARCODE / QR CODE</Text>
+                    <Text style={[styles.instructionText, { fontSize: 12, marginTop: 4, fontWeight: '500' }]}>
+                        SCAN AKAN BERJALAN OTOMATIS
+                    </Text>
                 </View>
 
-                {/* Shutter Button Overlay */}
-                <View style={styles.footer}>
-                    <TouchableOpacity style={styles.shutterOuter} onPress={onCapture}>
-                        <View style={styles.shutterInner}>
-                            <Ionicons name="camera" size={32} color="#1E293B" />
-                        </View>
-                    </TouchableOpacity>
-                </View>
+                {/* Footer deleted - Auto scan enabled */}
             </SafeAreaView>
         </Animated.View>
     );
@@ -348,6 +402,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         zIndex: 10,
     },
+    camera: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+        ...Platform.select({
+            web: {
+                height: '100vh',
+                width: '100vw',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                zIndex: -1, // Ensure it's behind overlays
+            }
+        }) as any,
+    }
 });
 
 export default ScannerScreen;
