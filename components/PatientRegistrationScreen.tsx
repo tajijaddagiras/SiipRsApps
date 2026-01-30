@@ -51,20 +51,10 @@ const PatientRegistrationScreen: React.FC<PatientRegistrationScreenProps> = ({
     const [showSuccess, setShowSuccess] = useState(false);
     const successOpacity = React.useRef(new Animated.Value(0)).current;
 
-    // Date Picker State
-    const [date, setDate] = useState(new Date());
-    const [showPicker, setShowPicker] = useState(false);
-
-    const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-        const currentDate = selectedDate || date;
-        setShowPicker(Platform.OS === 'ios');
-        setDate(currentDate);
-
-        if (selectedDate) {
-            const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
-            setDob(formattedDate);
-        }
-    };
+    // Date Picker State Removed - Reverted to Manual Input
+    // const [date, setDate] = useState(new Date());
+    // const [showPicker, setShowPicker] = useState(false);
+    // const onDateChange...
 
     // Fix: Always reset to form when the screen is opened
     React.useEffect(() => {
@@ -201,30 +191,15 @@ const PatientRegistrationScreen: React.FC<PatientRegistrationScreenProps> = ({
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Tanggal Lahir</Text>
                                 <View style={styles.inputWrapper}>
-                                    <TouchableOpacity
-                                        onPress={() => setShowPicker(true)}
-                                        activeOpacity={0.7}
-                                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
-                                    >
-                                        <Ionicons name="calendar-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={[styles.input, { flex: 1, cursor: Platform.OS === 'web' ? 'pointer' : 'auto' }]}
-                                            value={dob}
-                                            editable={false}
-                                            // pointerEvents="none" // REMOVED: potentially blacks interaction on web
-                                            placeholder="dd/mm/yyyy"
-                                            placeholderTextColor="#94A3B8"
-                                        />
-                                    </TouchableOpacity>
-                                    {showPicker && (
-                                        <DateTimePicker
-                                            value={date}
-                                            mode="date"
-                                            display="default"
-                                            onChange={onDateChange}
-                                            maximumDate={new Date()}
-                                        />
-                                    )}
+                                    <Ionicons name="calendar-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        value={dob}
+                                        onChangeText={setDob}
+                                        placeholder="dd/mm/yyyy"
+                                        placeholderTextColor="#94A3B8"
+                                        keyboardType="default"
+                                    />
                                 </View>
                             </View>
 
@@ -441,12 +416,13 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        height: 56,
-        borderWidth: 1.5,
-        borderColor: '#E2E8F0',
+        borderWidth: 1,
+        borderColor: '#D0D0D0', // Matches AuthScreen
         borderRadius: 12,
         paddingHorizontal: 16,
-        backgroundColor: '#F8FAFC', // Added background color to fix "damaged" look
+        paddingVertical: Platform.OS === 'web' ? 4 : 0, // Better spacing for web
+        backgroundColor: '#FFFFFF', // White background like AuthScreen
+        position: 'relative', // For overlay
     },
     inputIcon: {
         marginRight: 12,
@@ -456,6 +432,13 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#1E293B',
         fontWeight: '600',
+        // Removed fixed height, removed flex:1 to allow content sizing if needed, but flex:1 is good for textinput
+        paddingVertical: 14, // Matches AuthScreen padding
+        ...Platform.select({
+            web: {
+                outlineStyle: 'none',
+            }
+        }) as any,
     },
     radioGroup: {
         marginBottom: 20,

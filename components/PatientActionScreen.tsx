@@ -388,8 +388,8 @@ const styles = StyleSheet.create({
     notesWrapper: {
         backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        borderRadius: 16,
+        borderColor: '#D0D0D0', // Standardized Border Color
+        borderRadius: 16, // Keeping 16 as it matches the card style in this screen
         height: 80,
         padding: 12,
     },

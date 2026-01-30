@@ -340,23 +340,23 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     input: {
-        height: 52,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: '#D0D0D0', // Standardized Border Color
         borderRadius: 12,
         paddingHorizontal: 16,
+        paddingVertical: 14, // Standardized Padding
         fontSize: 16,
         color: '#1E293B',
         backgroundColor: '#fff',
     },
     phoneInputContainer: {
-        height: 52,
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: '#D0D0D0', // Standardized Border Color
         borderRadius: 12,
         paddingHorizontal: 12,
+        paddingVertical: 4, // Added vertical padding for better spacing
         backgroundColor: '#fff',
     },
     countryCodeContainer: {

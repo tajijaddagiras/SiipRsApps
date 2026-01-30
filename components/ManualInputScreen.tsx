@@ -223,16 +223,22 @@ const styles = StyleSheet.create({
     inputWrapper: {
         backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: '#D0D0D0', // Standardized Border Color
         borderRadius: 12,
-        height: 56,
         paddingHorizontal: 16,
+        paddingVertical: Platform.OS === 'web' ? 4 : 0,
         justifyContent: 'center',
     },
     input: {
         fontSize: 16,
         color: '#1E293B',
         fontWeight: '600',
+        paddingVertical: 14, // Standardized Padding
+        ...Platform.select({
+            web: {
+                outlineStyle: 'none',
+            }
+        }) as any,
     },
     footer: {
         padding: 24,
