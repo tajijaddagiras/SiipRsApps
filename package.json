@@ -8,12 +8,13 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "dev": "start cmd /k \"cd server && npm run dev\" && npx expo start",
-    "build": "prisma generate --schema=server/prisma/schema.prisma && npx expo export --platform web"
+    "build": "npx prisma@6.3.0 generate --schema=server/prisma/schema.prisma && npx expo export --platform web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@prisma/client": "6.3.0",
+    "prisma": "6.3.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -46,7 +47,6 @@
   "private": true,
   "devDependencies": {
     "@types/react": "~19.1.10",
-    "prisma": "6.3.0",
     "typescript": "~5.9.2"
   }
 }
