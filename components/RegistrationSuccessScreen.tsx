@@ -75,6 +75,9 @@ const RegistrationSuccessScreen: React.FC<RegistrationSuccessScreenProps> = ({
                             dom.body.appendChild(link);
                             link.click();
                             dom.body.removeChild(link);
+
+                            // Close modal after successful download on Web
+                            onClose();
                         }
                     } else {
                         throw new Error('Card ref is null');
