@@ -175,7 +175,7 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({
                         setScanned(true);
                         setLoading(true);
                         try {
-                            const response = await fetch(`${BASE_URL}/patients/search/${data}`);
+                            const response = await fetch(`${BASE_URL}/patients/${data}`);
                             const patientData = await response.json();
 
                             if (response.ok) {

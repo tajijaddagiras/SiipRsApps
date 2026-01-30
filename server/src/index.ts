@@ -361,6 +361,49 @@ app.get('/api/patients', async (req: Request, res: Response) => {
     }
 });
 
+// GET PATIENT BY MRN (Direct) - Matching Vercel API Signature
+app.get('/api/patients/:mrn', async (req: Request, res: Response) => {
+    const { mrn } = req.params as { mrn: string };
+    // Avoid conflict with /search or other words if they were IDs, but MRN is digits.
+    // However, if we put this BEFORE /search, /search might be captured as :mrn if not careful.
+    // Express matches top-down. 
+    // "search" is a string. If we have /api/patients/search/:mrn defined LATER, 
+    // and we call /api/patients/search, it matches THIS route with mrn="search".
+    // SO WE MUST CHECK if mrn === 'search' and forward/skip? 
+    // OR we put specific routes (like /search) BEFORE dynamic routes (/:mrn).
+
+    // BUT! The existing code has /api/patients/search/:mrn defined BELOW.
+    // If I insert this HERE (Line 363), it is AFTER /api/patients (List).
+    // It is BEFORE /api/patients/search/:mrn.
+    // If a request comes for /api/patients/search/123 -> It matches /api/patients/search/123 (if defined).
+    // WAIT. /api/patients/:mrn matches /api/patients/search ??
+    // No. /api/patients/:mrn expects ONE segment. /api/patients/search/123 has TWO segments.
+    // So /api/patients/search/123 will NOT be reduced to /api/patients/:mrn.
+    // BUT /api/patients/search (if that route existed) would be captured.
+
+    // The issue is simply that the client is calling /api/patients/${mrn}.
+    // So we just need to implement this endpoint.
+
+    try {
+        const patient = await prisma.patient.findUnique({
+            where: { mrn },
+            include: {
+                activityLogs: {
+                    take: 10,
+                    orderBy: { createdAt: 'desc' }
+                }
+            }
+        });
+        if (!patient) {
+            return res.status(404).json({ message: 'Pasien tidak ditemukan' });
+        }
+        res.json(patient);
+    } catch (error) {
+        console.error('Fetch Patient Error:', error);
+        res.status(500).json({ message: 'Gagal mengambil data pasien' });
+    }
+});
+
 // Search Patient by MRN
 app.get('/api/patients/search/:mrn', async (req: Request, res: Response) => {
     const { mrn } = req.params as { mrn: string };
