@@ -55,33 +55,43 @@ const RegistrationSuccessScreen: React.FC<RegistrationSuccessScreenProps> = ({
         setDownloading(true);
 
         try {
-            console.log('Download initiated. Platform:', Platform.OS);
-            // Capture the view
-            console.log('Starting captureRef...');
-            const uri = await captureRef(viewShotRef, {
-                format: 'png',
-                quality: 1,
-                result: 'data-uri', // Ensure we get base64 string
-            });
-            console.log('CaptureRef success. URI length:', uri?.length);
-            console.log('URI prefix:', uri?.substring(0, 50));
-
-            // Platform specific download logic
             if (Platform.OS === 'web') {
-                // Create a temporary anchor element for download
-                // @ts-ignore
-                const link = document.createElement('a');
-                link.href = uri;
-                link.download = `kartu-pasien-${patientData.mrn}.png`;
-                // @ts-ignore
-                document.body.appendChild(link);
-                link.click();
-                // @ts-ignore
-                document.body.removeChild(link);
+                try {
+                    const html2canvas = require('html2canvas');
+                    if (cardRef.current) {
+                        const canvas = await html2canvas(cardRef.current, {
+                            backgroundColor: '#ffffff',
+                            scale: 2
+                        });
+                        const data = canvas.toDataURL('image/png');
 
-                // Close after download on web
-                onClose();
+                        // Access document safely via window for TS
+                        // @ts-ignore
+                        const dom = typeof document !== 'undefined' ? document : null;
+                        if (dom) {
+                            const link = dom.createElement('a');
+                            link.href = data;
+                            link.download = `kartu-pasien-${patientData.mrn}.png`;
+                            dom.body.appendChild(link);
+                            link.click();
+                            dom.body.removeChild(link);
+                        }
+                    } else {
+                        throw new Error('Card ref is null');
+                    }
+                } catch (e) {
+                    console.error('Web capture failed:', e);
+                    Alert.alert('Gagal', 'Terjadi kesalahan saat menyimpan kartu di web.');
+                }
             } else {
+                // Mobile capture
+                console.log('Starting captureRef...');
+                const uri = await captureRef(viewShotRef, {
+                    format: 'png',
+                    quality: 1,
+                    result: 'data-uri'
+                });
+
                 // Mobile Sharing Logic
                 if (!(await Sharing.isAvailableAsync())) {
                     Alert.alert('Gagal', 'Fitur berbagi tidak tersedia di perangkat ini.');
@@ -98,7 +108,6 @@ const RegistrationSuccessScreen: React.FC<RegistrationSuccessScreenProps> = ({
                 // Auto-navigate back on mobile
                 onClose();
             }
-
         } catch (error) {
             console.error('Download error:', error);
             Alert.alert('Gagal', 'Terjadi kesalahan saat memproses kartu.');
