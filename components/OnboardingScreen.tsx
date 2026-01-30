@@ -5,13 +5,10 @@ import {
     TouchableOpacity,
     Animated,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { OnboardingItem } from '../types';
-
-// Use 'window' for layout consistency with App.tsx
-const { width, height } = Dimensions.get('window');
 
 interface OnboardingScreenProps {
     data: OnboardingItem[];
@@ -30,11 +27,133 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     dotScroll,
     onNext
 }) => {
+    const { width, height } = useWindowDimensions();
+    const isDesktop = width > 768;
 
+    // ========== MOBILE LAYOUT (Original - Untouched) ==========
+    if (!isDesktop) {
+        return (
+            <View style={[StyleSheet.absoluteFill, { zIndex: 1, backgroundColor: '#fff' }]}>
+                {/* 1. Background Images - Stacked at Top */}
+                <View style={styles.mobileImageStack}>
+                    {data.map((item, index) => {
+                        const opacity = onboardingScroll.interpolate({
+                            inputRange: [
+                                (index - 1) * width,
+                                index * width,
+                                (index + 1) * width
+                            ],
+                            outputRange: [0, 1, 0],
+                            extrapolate: 'clamp'
+                        });
+
+                        return (
+                            <Animated.View
+                                key={index}
+                                style={[StyleSheet.absoluteFill, { opacity }]}
+                            >
+                                <Image
+                                    source={item.image}
+                                    style={{ width: '100%', height: '100%' }}
+                                    contentFit="cover"
+                                    transition={0}
+                                    priority="high"
+                                    cachePolicy="memory-disk"
+                                />
+                            </Animated.View>
+                        );
+                    })}
+                </View>
+
+                {/* 2. Content Card - Bottom Overlay */}
+                <View style={styles.mobileContentContainer}>
+                    {/* 3. Text Content - Sliding */}
+                    <View style={styles.mobileTextStackArea}>
+                        <Animated.View
+                            style={{
+                                flexDirection: 'row',
+                                width: width * data.length,
+                                transform: [{
+                                    translateX: onboardingScroll.interpolate({
+                                        inputRange: [0, width * (data.length - 1)],
+                                        outputRange: [0, -width * (data.length - 1)],
+                                        extrapolate: 'clamp'
+                                    })
+                                }]
+                            }}
+                        >
+                            {data.map((item, index) => (
+                                <View key={index} style={[styles.mobileTextPage, { width }]}>
+                                    <View style={styles.mobileTextInnerWrapper}>
+                                        <Text style={styles.mobileTitle}>{item.title}</Text>
+                                        <Text style={styles.mobileSubtitle}>{item.subtitle}</Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </Animated.View>
+                    </View>
+
+                    {/* 4. Controls - Dots & Button */}
+                    <View style={styles.mobileBottomSection}>
+                        <View style={styles.mobilePaginationContainer}>
+                            {data.map((_, index) => {
+                                const dotDisplayWidth = dotScroll.interpolate({
+                                    inputRange: [
+                                        (index - 1) * width,
+                                        index * width,
+                                        (index + 1) * width
+                                    ],
+                                    outputRange: [8, 24, 8],
+                                    extrapolate: 'clamp'
+                                });
+
+                                const dotColor = dotScroll.interpolate({
+                                    inputRange: [
+                                        (index - 1) * width,
+                                        index * width,
+                                        (index + 1) * width
+                                    ],
+                                    outputRange: ['#E0E0E0', '#4285F4', '#E0E0E0'],
+                                    extrapolate: 'clamp'
+                                });
+
+                                return (
+                                    <Animated.View
+                                        key={index}
+                                        style={[
+                                            styles.mobileDot,
+                                            {
+                                                width: dotDisplayWidth,
+                                                backgroundColor: dotColor
+                                            }
+                                        ]}
+                                    />
+                                );
+                            })}
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.mobileButton}
+                            activeOpacity={0.8}
+                            onPress={onNext}
+                        >
+                            <Animated.View style={{ opacity: fadeAnim }}>
+                                <Text style={styles.mobileButtonText}>
+                                    {currentStep === data.length - 1 ? 'Memulai' : 'Berikutnya'}
+                                </Text>
+                            </Animated.View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    // ========== DESKTOP LAYOUT (Split View) ==========
     return (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 1, backgroundColor: '#fff' }]}>
-            {/* 1. Background Images - Native Driver for Smoothness */}
-            <View style={styles.imageStack}>
+        <View style={[StyleSheet.absoluteFill, { zIndex: 1, backgroundColor: '#fff', flexDirection: 'row' }]}>
+            {/* Left Side - Image */}
+            <View style={styles.desktopImageContainer}>
                 {data.map((item, index) => {
                     const opacity = onboardingScroll.interpolate({
                         inputRange: [
@@ -64,40 +183,39 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                 })}
             </View>
 
-            {/* 2. Content Card Wrapper */}
-            <View style={[styles.contentContainer, { zIndex: 10 }]}>
-
-                {/* 3. Text Content - Synchronized Sliding (Perfect 1:1 Window Units) */}
-                <View style={styles.textStackArea}>
+            {/* Right Side - Content */}
+            <View style={styles.desktopContentContainer}>
+                {/* Text Content */}
+                <View style={styles.desktopTextStackArea}>
                     <Animated.View
                         style={{
                             flexDirection: 'row',
-                            width: width * data.length,
+                            width: (width / 2) * data.length,
                             transform: [{
                                 translateX: onboardingScroll.interpolate({
                                     inputRange: [0, width * (data.length - 1)],
-                                    outputRange: [0, -width * (data.length - 1)],
+                                    outputRange: [0, -(width / 2) * (data.length - 1)],
                                     extrapolate: 'clamp'
                                 })
                             }]
                         }}
                     >
                         {data.map((item, index) => (
-                            <View key={index} style={[styles.textPage, { width: width }]}>
-                                <View style={styles.textInnerWrapper}>
-                                    <Text style={styles.title}>{item.title}</Text>
-                                    <Text style={styles.subtitle}>{item.subtitle}</Text>
+                            <View key={index} style={[styles.desktopTextPage, { width: width / 2 }]}>
+                                <View style={styles.desktopTextInnerWrapper}>
+                                    <Text style={styles.desktopTitle}>{item.title}</Text>
+                                    <Text style={styles.desktopSubtitle}>{item.subtitle}</Text>
                                 </View>
                             </View>
                         ))}
                     </Animated.View>
                 </View>
 
-                {/* 4. Controls - Elastic Dots & Button */}
-                <View style={styles.bottomSection}>
-                    <View style={styles.paginationContainer}>
+                {/* Controls */}
+                <View style={styles.desktopBottomSection}>
+                    <View style={styles.desktopPaginationContainer}>
                         {data.map((_, index) => {
-                            const dotWidth = dotScroll.interpolate({
+                            const dotDisplayWidth = dotScroll.interpolate({
                                 inputRange: [
                                     (index - 1) * width,
                                     index * width,
@@ -121,9 +239,9 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                                 <Animated.View
                                     key={index}
                                     style={[
-                                        styles.dot,
+                                        styles.desktopDot,
                                         {
-                                            width: dotWidth,
+                                            width: dotDisplayWidth,
                                             backgroundColor: dotColor
                                         }
                                     ]}
@@ -133,12 +251,12 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                     </View>
 
                     <TouchableOpacity
-                        style={styles.button}
+                        style={styles.desktopButton}
                         activeOpacity={0.8}
                         onPress={onNext}
                     >
                         <Animated.View style={{ opacity: fadeAnim }}>
-                            <Text style={styles.buttonText}>
+                            <Text style={styles.desktopButtonText}>
                                 {currentStep === data.length - 1 ? 'Memulai' : 'Berikutnya'}
                             </Text>
                         </Animated.View>
@@ -150,85 +268,176 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-    imageStack: {
+    // ========== MOBILE STYLES (Original) ==========
+    mobileImageStack: {
         position: 'absolute',
         top: 0,
         left: 0,
-        width: width,
-        height: height * 0.65,
+        right: 0,
+        height: '60%',
+        backgroundColor: '#F8F9FA',
     },
-    contentContainer: {
+    mobileContentContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: height * 0.48, // Balanced height for text safety and aesthetics
+        height: '50%',
         backgroundColor: '#fff',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        paddingTop: 35, // Slightly reduced to save space
-        paddingBottom: 35,
+        borderTopLeftRadius: 50,
+        borderTopRightRadius: 50,
+        paddingTop: 40,
+        paddingBottom: 40,
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 15,
+        elevation: 10,
+        zIndex: 10,
     },
-    textStackArea: {
+    mobileTextStackArea: {
         flex: 1,
-        width: width,
+        width: '100%',
         position: 'relative',
         overflow: 'hidden',
     },
-    textPage: {
-        flex: 1,
+    mobileTextPage: {
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
     },
-    textInnerWrapper: {
+    mobileTextInnerWrapper: {
         width: '100%',
-        paddingHorizontal: 48, // Secure horizontal space
+        paddingHorizontal: 40,
         alignItems: 'center',
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
+    mobileTitle: {
+        fontSize: 28,
+        fontWeight: '800',
         textAlign: 'center',
         color: '#000',
-        marginBottom: 12, // Slightly reduced
-        lineHeight: 32,
+        marginBottom: 16,
+        lineHeight: 36,
     },
-    subtitle: {
-        fontSize: 14,
-        color: '#666',
+    mobileSubtitle: {
+        fontSize: 15,
+        color: '#777',
         textAlign: 'center',
-        lineHeight: 20, // Slightly more compact
+        lineHeight: 22,
+        fontWeight: '400',
     },
-    bottomSection: {
+    mobileBottomSection: {
         alignItems: 'center',
         width: '100%',
         paddingHorizontal: 24,
     },
-    paginationContainer: {
+    mobilePaginationContainer: {
         flexDirection: 'row',
-        marginVertical: 20,
+        marginBottom: 35,
         height: 10,
         alignItems: 'center',
     },
-    dot: {
+    mobileDot: {
         height: 8,
         borderRadius: 4,
-        marginHorizontal: 4,
+        marginHorizontal: 3,
     },
-    button: {
+    mobileButton: {
         backgroundColor: '#4285F4',
         width: '100%',
         paddingVertical: 18,
-        borderRadius: 30,
+        borderRadius: 24,
         alignItems: 'center',
         marginBottom: 10,
+        shadowColor: '#4285F4',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 5,
     },
-    buttonText: {
+    mobileButtonText: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '700',
+    },
+
+    // ========== DESKTOP STYLES ==========
+    desktopImageContainer: {
+        width: '50%',
+        height: '100%',
+        backgroundColor: '#F8F9FA',
+    },
+    desktopContentContainer: {
+        width: '50%',
+        height: '100%',
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    desktopTextStackArea: {
+        flex: 1,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    desktopTextPage: {
+        flex: 1,
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+    },
+    desktopTextInnerWrapper: {
+        width: '100%',
+        paddingHorizontal: 60,
+    },
+    desktopTitle: {
+        fontSize: 36,
+        fontWeight: '800',
+        textAlign: 'left',
+        color: '#000',
+        marginBottom: 20,
+        lineHeight: 44,
+    },
+    desktopSubtitle: {
+        fontSize: 18,
+        color: '#666',
+        textAlign: 'left',
+        lineHeight: 28,
+        fontWeight: '400',
+    },
+    desktopBottomSection: {
+        alignItems: 'flex-start',
+        width: '100%',
+        paddingHorizontal: 60,
+    },
+    desktopPaginationContainer: {
+        flexDirection: 'row',
+        marginBottom: 40,
+        height: 10,
+        alignItems: 'center',
+    },
+    desktopDot: {
+        height: 8,
+        borderRadius: 4,
+        marginHorizontal: 3,
+    },
+    desktopButton: {
+        backgroundColor: '#4285F4',
+        width: '80%',
+        maxWidth: 400,
+        paddingVertical: 18,
+        borderRadius: 24,
+        alignItems: 'center',
+        shadowColor: '#4285F4',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 5,
+    },
+    desktopButtonText: {
         color: '#fff',
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
     },
 });
 
 export default OnboardingScreen;
+

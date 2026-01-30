@@ -10,7 +10,8 @@ import {
     Animated,
     StyleSheet,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    useWindowDimensions
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,10 @@ interface AuthScreenProps {
     setShowPassword: (show: boolean) => void;
     rememberMe: boolean;
     setRememberMe: (val: boolean) => void;
+    email: string;
+    setEmail: (text: string) => void;
+    password: string;
+    setPassword: (text: string) => void;
     handleLogin: () => void;
     // Forgot Password / OTP / Reset State
     forgotPasswordOpacity: Animated.Value;
@@ -49,20 +54,75 @@ interface AuthScreenProps {
     showSuccessScreen: boolean;
     handleCloseSuccessScreen: () => void;
     isProfileFlow?: boolean;
+    // New Props for State Sync
+    newPass: string;
+    setNewPass: (val: string) => void;
+    confirmNewPass: string;
+    setConfirmNewPass: (val: string) => void;
+    // Shake & Error Props
+    emailError?: boolean;
+    passwordError?: boolean;
+    shakeTrigger?: number;
+    // Registration Props
+    regName: string;
+    setRegName: (val: string) => void;
+    regEmail: string;
+    setRegEmail: (val: string) => void;
+    regPhone: string;
+    setRegPhone: (val: string) => void;
+    regPassword: string;
+    setRegPassword: (val: string) => void;
+    handleRegister: () => void;
+    regNameError?: boolean;
+    regEmailError?: boolean;
+    regPasswordError?: boolean;
+    otpTimer?: number;
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = (props: AuthScreenProps) => {
     const {
         loginOpacity, showLogin, activeTab, setActiveTab,
         showPassword, setShowPassword, rememberMe, setRememberMe,
+        email, setEmail, password, setPassword,
         handleLogin, forgotPasswordOpacity, showForgotPassword,
         handleForgotPassword, handleSendOTP, otpVerificationOpacity,
         showOTPVerification, handleCloseOTP, otpCode, otpSelection, setOtpSelection,
         inputRefs, handleOtpChange, resetPasswordOpacity,
         showResetPassword, handleCloseResetPassword, handleSaveNewPassword,
         successScreenOpacity, showSuccessScreen, handleCloseSuccessScreen,
-        isProfileFlow
+        isProfileFlow,
+        newPass, setNewPass, confirmNewPass, setConfirmNewPass,
+        emailError, passwordError, shakeTrigger,
+        regName, setRegName, regEmail, setRegEmail,
+        regPhone, setRegPhone, regPassword, setRegPassword,
+        handleRegister,
+        regNameError, regEmailError, regPasswordError,
+        otpTimer
     } = props;
+
+    const { width, height } = useWindowDimensions();
+    const isDesktop = width > 768;
+
+    const shakeAnim = React.useRef(new Animated.Value(0)).current;
+
+    const shake = () => {
+        shakeAnim.setValue(0);
+        Animated.sequence([
+            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+        ]).start();
+    };
+
+    React.useEffect(() => {
+        if (shakeTrigger && shakeTrigger > 0) {
+            shake();
+        }
+    }, [shakeTrigger]);
+
+    const [forgotEmail, setForgotEmail] = React.useState('');
+    const [focusedField, setFocusedField] = React.useState<string | null>(null);
 
     // Auto-focus the hidden input only when the OTP screen is shown
     React.useEffect(() => {
@@ -90,182 +150,261 @@ const AuthScreen: React.FC<AuthScreenProps> = (props: AuthScreenProps) => {
                 ]}
             >
                 <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right'] as any}>
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={{ flex: 1 }}
-                    >
-                        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                            <View style={styles.logoContainer}>
-                                <Image
-                                    source={require('../assets/images/logo.png')}
-                                    style={styles.logo}
-                                    contentFit="contain"
-                                />
+                    <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
+                        {isDesktop && (
+                            <View style={styles.desktopLeftPanel}>
+                                <View style={styles.desktopBranding}>
+                                    <Image
+                                        source={require('../assets/images/logo.png')}
+                                        style={styles.desktopLogo}
+                                        contentFit="contain"
+                                    />
+                                    <Text style={styles.desktopBrandName}>SIIP-RS</Text>
+                                    <Text style={styles.desktopBrandTagline}>Sistem Informasi Identitas Pasien{'\n'}Rumah Sakit Terintegrasi</Text>
+                                </View>
+                                <View style={styles.desktopDecorCircle} />
                             </View>
-
-                            <Text style={styles.loginTitle}>Mulailah sekarang</Text>
-                            <Text style={styles.loginSubtitle}>
-                                Buat akun atau masuk untuk{'\n'}menjelajahi aplikasi kami
-                            </Text>
-
-                            <View style={styles.tabContainer}>
-                                <TouchableOpacity
-                                    style={[styles.tab, activeTab === 'Masuk' && styles.activeTab]}
-                                    onPress={() => setActiveTab('Masuk')}
-                                >
-                                    <Text style={[styles.tabText, activeTab === 'Masuk' && styles.tabTextActive]}>Masuk</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.tab, activeTab === 'Daftar' && styles.activeTab]}
-                                    onPress={() => setActiveTab('Daftar')}
-                                >
-                                    <Text style={[styles.tabText, activeTab === 'Daftar' && styles.tabTextActive]}>Daftar</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* === FORM INPUTS === */}
-                            {activeTab === 'Masuk' ? (
-                                <>
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Email</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="kelompok123@gmail.com"
-                                            placeholderTextColor="#A0A0A0"
-                                            keyboardType="email-address"
-                                            autoCapitalize="none"
+                        )}
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            style={{ flex: 1 }}
+                        >
+                            <ScrollView
+                                contentContainerStyle={[
+                                    styles.scrollContent,
+                                    isDesktop && {
+                                        flex: 1,
+                                        justifyContent: 'center',
+                                        maxWidth: 600,
+                                        alignSelf: 'center',
+                                        width: '100%',
+                                        paddingHorizontal: 60
+                                    }
+                                ]}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {!isDesktop && (
+                                    <View style={styles.logoContainer}>
+                                        <Image
+                                            source={require('../assets/images/logo.png')}
+                                            style={styles.logo}
+                                            contentFit="contain"
                                         />
+                                        <Text style={styles.logoText}>SIIP-RS</Text>
                                     </View>
+                                )}
 
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Kata Sandi</Text>
-                                        <View style={styles.passwordContainer}>
-                                            <TextInput
-                                                style={styles.passwordInput}
-                                                placeholder="**********"
-                                                placeholderTextColor="#A0A0A0"
-                                                secureTextEntry={!showPassword}
-                                            />
-                                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                                <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#A0A0A0" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
+                                <Text style={styles.loginTitle}>Mulailah sekarang</Text>
+                                <Text style={styles.loginSubtitle}>
+                                    Buat akun atau masuk untuk{'\n'}menjelajahi aplikasi kami
+                                </Text>
 
-                                    <View style={styles.optionsRow}>
-                                        <TouchableOpacity
-                                            style={styles.checkboxContainer}
-                                            onPress={() => setRememberMe(!rememberMe)}
-                                        >
-                                            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                                                {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
-                                            </View>
-                                            <Text style={styles.checkboxLabel}>Ingat saya</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => handleForgotPassword(true)}>
-                                            <Text style={styles.forgotPassword}>Lupa Kata Sandi?</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </>
-                            ) : (
-                                <>
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Nama Lengkap</Text>
-                                        <View style={styles.iconInputContainer}>
-                                            <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
-                                            <TextInput
-                                                style={styles.iconInput}
-                                                placeholder="kelompok"
-                                                placeholderTextColor="#A0A0A0"
-                                                autoCapitalize="words"
-                                            />
-                                        </View>
-                                    </View>
+                                <View style={styles.tabContainer}>
+                                    <TouchableOpacity
+                                        style={[styles.tab, activeTab === 'Masuk' && styles.activeTab]}
+                                        onPress={() => setActiveTab('Masuk')}
+                                    >
+                                        <Text style={[styles.tabText, activeTab === 'Masuk' && styles.tabTextActive]}>Masuk</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.tab, activeTab === 'Daftar' && styles.activeTab]}
+                                        onPress={() => setActiveTab('Daftar')}
+                                    >
+                                        <Text style={[styles.tabText, activeTab === 'Daftar' && styles.tabTextActive]}>Daftar</Text>
+                                    </TouchableOpacity>
+                                </View>
 
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Email</Text>
-                                        <View style={styles.iconInputContainer}>
-                                            <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
+                                {/* === FORM INPUTS === */}
+                                {activeTab === 'Masuk' ? (
+                                    <>
+                                        <Animated.View style={[
+                                            styles.inputContainer,
+                                            { transform: [{ translateX: shakeAnim }] }
+                                        ]}>
+                                            <Text style={styles.inputLabel}>Email</Text>
                                             <TextInput
-                                                style={styles.iconInput}
-                                                placeholder="kelompok123@gmail.com"
+                                                style={[styles.input, emailError && styles.inputError]}
+                                                placeholder={focusedField === 'loginEmail' ? '' : 'Masukkan email'}
                                                 placeholderTextColor="#A0A0A0"
                                                 keyboardType="email-address"
                                                 autoCapitalize="none"
+                                                value={email}
+                                                onChangeText={setEmail}
+                                                onFocus={() => {
+                                                    setFocusedField('loginEmail');
+                                                }}
+                                                onBlur={() => setFocusedField(null)}
                                             />
-                                        </View>
-                                    </View>
+                                        </Animated.View>
 
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Nomor Telepon</Text>
-                                        <View style={styles.phoneContainer}>
-                                            <View style={styles.flagContainer}>
-                                                <View style={styles.flagIconCircle}>
-                                                    <View style={{ width: 24, height: 12, backgroundColor: '#FF0000', position: 'absolute', top: 0 }} />
-                                                    <View style={{ width: 24, height: 12, backgroundColor: '#FFFFFF', position: 'absolute', bottom: 0 }} />
-                                                </View>
-                                                <Ionicons name="chevron-down" size={12} color="#666" style={{ marginLeft: 4 }} />
+                                        <Animated.View style={[
+                                            styles.inputContainer,
+                                            { transform: [{ translateX: shakeAnim }] }
+                                        ]}>
+                                            <Text style={styles.inputLabel}>Kata Sandi</Text>
+                                            <View style={[styles.passwordContainer, passwordError && styles.inputError]}>
+                                                <TextInput
+                                                    style={styles.passwordInput}
+                                                    placeholder={focusedField === 'loginPassword' ? '' : '**********'}
+                                                    placeholderTextColor="#A0A0A0"
+                                                    secureTextEntry={!showPassword}
+                                                    value={password}
+                                                    onChangeText={setPassword}
+                                                    onFocus={() => {
+                                                        setFocusedField('loginPassword');
+                                                    }}
+                                                    onBlur={() => setFocusedField(null)}
+                                                />
+                                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                                    <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#A0A0A0" />
+                                                </TouchableOpacity>
                                             </View>
-                                            <TextInput
-                                                style={styles.phoneInput}
-                                                placeholder="(+62)"
-                                                placeholderTextColor="#000"
-                                                keyboardType="phone-pad"
-                                            />
-                                        </View>
-                                    </View>
+                                        </Animated.View>
 
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Kata Sandi</Text>
-                                        <View style={styles.iconInputContainer}>
-                                            <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
-                                            <TextInput
-                                                style={styles.iconInput}
-                                                placeholder="**********"
-                                                placeholderTextColor="#A0A0A0"
-                                                secureTextEntry={!showPassword}
-                                            />
-                                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                                <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#A0A0A0" />
+                                        <View style={styles.optionsRow}>
+                                            <TouchableOpacity
+                                                style={styles.checkboxContainer}
+                                                onPress={() => setRememberMe(!rememberMe)}
+                                            >
+                                                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                                                    {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
+                                                </View>
+                                                <Text style={styles.checkboxLabel}>Ingat saya</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => handleForgotPassword(true)}>
+                                                <Text style={styles.forgotPassword}>Lupa Kata Sandi?</Text>
                                             </TouchableOpacity>
                                         </View>
-                                        <Text style={styles.helperText}>Panjangnya minimal 8 karakter!</Text>
-                                    </View>
-                                </>
-                            )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>Nama Lengkap</Text>
+                                            <View style={[styles.iconInputContainer, regNameError && styles.inputError]}>
+                                                <Ionicons name="person-outline" size={20} color={regNameError ? '#EF4444' : '#A0A0A0'} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.iconInput}
+                                                    placeholder={focusedField === 'regName' ? '' : 'Nama Lengkap'}
+                                                    placeholderTextColor="#A0A0A0"
+                                                    autoCapitalize="words"
+                                                    value={regName}
+                                                    onChangeText={setRegName}
+                                                    onFocus={() => {
+                                                        setFocusedField('regName');
+                                                    }}
+                                                    onBlur={() => setFocusedField(null)}
+                                                />
+                                            </View>
+                                        </View>
 
-                            <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleLogin}>
-                                <Text style={styles.loginButtonText}>
-                                    {activeTab === 'Masuk' ? 'Masuk' : 'Daftar'}
-                                </Text>
-                            </TouchableOpacity>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>Email</Text>
+                                            <View style={[styles.iconInputContainer, regEmailError && styles.inputError]}>
+                                                <Ionicons name="mail-outline" size={20} color={regEmailError ? '#EF4444' : '#A0A0A0'} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.iconInput}
+                                                    placeholder={focusedField === 'regEmail' ? '' : 'Masukkan email'}
+                                                    placeholderTextColor="#A0A0A0"
+                                                    keyboardType="email-address"
+                                                    autoCapitalize="none"
+                                                    value={regEmail}
+                                                    onChangeText={setRegEmail}
+                                                    onFocus={() => {
+                                                        setFocusedField('regEmail');
+                                                    }}
+                                                    onBlur={() => setFocusedField(null)}
+                                                />
+                                            </View>
+                                        </View>
 
-                            {activeTab === 'Masuk' && (
-                                <>
-                                    <View style={styles.dividerContainer}>
-                                        <View style={styles.dividerLine} />
-                                        <Text style={styles.dividerText}>Atau masuk dengan</Text>
-                                        <View style={styles.dividerLine} />
-                                    </View>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>Nomor Telepon</Text>
+                                            <View style={styles.phoneContainer}>
+                                                <View style={styles.flagContainer}>
+                                                    <View style={styles.flagIconCircle}>
+                                                        <View style={{ width: 24, height: 12, backgroundColor: '#FF0000', position: 'absolute', top: 0 }} />
+                                                        <View style={{ width: 24, height: 12, backgroundColor: '#FFFFFF', position: 'absolute', bottom: 0 }} />
+                                                    </View>
+                                                    <Ionicons name="chevron-down" size={12} color="#666" style={{ marginLeft: 4 }} />
+                                                </View>
+                                                <Text style={{ fontSize: 16, color: '#000', marginLeft: 8, marginRight: 2 }}>(+62)</Text>
+                                                <TextInput
+                                                    style={styles.phoneInput}
+                                                    placeholder={focusedField === 'regPhone' ? '' : '8123456789'}
+                                                    placeholderTextColor="#A0A0A0"
+                                                    keyboardType="phone-pad"
+                                                    value={regPhone}
+                                                    onChangeText={setRegPhone}
+                                                    onFocus={() => {
+                                                        setFocusedField('regPhone');
+                                                    }}
+                                                    onBlur={() => setFocusedField(null)}
+                                                />
+                                            </View>
+                                        </View>
 
-                                    <View style={styles.socialRow}>
-                                        <TouchableOpacity style={styles.socialButton}>
-                                            <Image
-                                                source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png' }}
-                                                style={{ width: 24, height: 24 }}
-                                                contentFit="contain"
-                                            />
-                                            <Text style={styles.socialButtonText}>Google</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.socialButton}>
-                                            <Ionicons name="logo-apple" size={24} color="#000" />
-                                            <Text style={styles.socialButtonText}>Apple</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </>
-                            )}
-                        </ScrollView>
-                    </KeyboardAvoidingView>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>Kata Sandi</Text>
+                                            <View style={[styles.iconInputContainer, regPasswordError && styles.inputError]}>
+                                                <Ionicons name="lock-closed-outline" size={20} color={regPasswordError ? '#EF4444' : '#A0A0A0'} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.iconInput}
+                                                    placeholder={focusedField === 'regPassword' ? '' : '**********'}
+                                                    placeholderTextColor="#A0A0A0"
+                                                    secureTextEntry={!showPassword}
+                                                    value={regPassword}
+                                                    onChangeText={setRegPassword}
+                                                    onFocus={() => {
+                                                        setFocusedField('regPassword');
+                                                    }}
+                                                    onBlur={() => setFocusedField(null)}
+                                                />
+                                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                                    <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={regPasswordError ? '#EF4444' : '#A0A0A0'} />
+                                                </TouchableOpacity>
+                                            </View>
+                                            <Text style={styles.helperText}>Panjangnya minimal 8 karakter!</Text>
+                                        </View>
+                                    </>
+                                )}
+
+                                <TouchableOpacity
+                                    style={styles.loginButton}
+                                    activeOpacity={0.8}
+                                    onPress={activeTab === 'Masuk' ? handleLogin : handleRegister}
+                                >
+                                    <Text style={styles.loginButtonText}>
+                                        {activeTab === 'Masuk' ? 'Masuk' : 'Daftar'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {activeTab === 'Masuk' && (
+                                    <>
+                                        <View style={styles.dividerContainer}>
+                                            <View style={styles.dividerLine} />
+                                            <Text style={styles.dividerText}>Atau masuk dengan</Text>
+                                            <View style={styles.dividerLine} />
+                                        </View>
+
+                                        <View style={styles.socialRow}>
+                                            <TouchableOpacity style={styles.socialButton}>
+                                                <Image
+                                                    source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png' }}
+                                                    style={{ width: 24, height: 24 }}
+                                                    contentFit="contain"
+                                                />
+                                                <Text style={styles.socialButtonText}>Google</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.socialButton}>
+                                                <Ionicons name="logo-apple" size={24} color="#000" />
+                                                <Text style={styles.socialButtonText}>Apple</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
+                            </ScrollView>
+                        </KeyboardAvoidingView>
+                    </View>
                 </SafeAreaView>
             </Animated.View>
 
@@ -281,36 +420,66 @@ const AuthScreen: React.FC<AuthScreenProps> = (props: AuthScreenProps) => {
                 ]}
             >
                 <SafeAreaView style={{ flex: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => handleForgotPassword(false)} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#000" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Lupa Kata Sandi Anda</Text>
-                        <View style={{ width: 40, marginLeft: 16 }} />
-                    </View>
+                    <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
+                        {isDesktop && (
+                            <View style={styles.desktopLeftPanel}>
+                                <View style={styles.desktopBranding}>
+                                    <View style={styles.desktopIconBg}>
+                                        <Ionicons name="lock-open" size={60} color="#fff" />
+                                    </View>
+                                    <Text style={styles.desktopBrandName}>Pemulihan</Text>
+                                    <Text style={styles.desktopBrandTagline}>Amankan kembali akun Anda{'\n'}dengan langkah mudah</Text>
+                                </View>
+                                <View style={styles.desktopDecorCircle} />
+                            </View>
+                        )}
+                        <View style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-start' }}>
+                            <View style={[styles.header, isDesktop && { borderBottomWidth: 0, paddingHorizontal: 40 }]}>
+                                <TouchableOpacity onPress={() => handleForgotPassword(false)} style={styles.backButton}>
+                                    <Ionicons name="arrow-back" size={24} color="#000" />
+                                </TouchableOpacity>
+                                <Text style={styles.headerTitle}>Lupa Kata Sandi Anda</Text>
+                                <View style={{ width: 40, marginLeft: 16 }} />
+                            </View>
 
-                    <View style={styles.forgotPasswordContent}>
-                        <Text style={styles.forgotPasswordDesc}>
-                            Kami siap membantu Anda, Masukkan email terdaftar Anda untuk mengatur ulang kata sandi Anda, Kami akan mengirimkan kode OTP ke email Anda untuk langkah selanjutnya
-                        </Text>
+                            <View style={[
+                                styles.forgotPasswordContent,
+                                isDesktop && {
+                                    maxWidth: 500,
+                                    alignSelf: 'center',
+                                    width: '100%',
+                                    paddingHorizontal: 40
+                                }
+                            ]}>
+                                <Text style={[styles.forgotPasswordDesc, isDesktop && { textAlign: 'left', fontSize: 16 }]}>
+                                    Kami siap membantu Anda, Masukkan email terdaftar Anda untuk mengatur ulang kata sandi Anda, Kami akan mengirimkan kode OTP ke email Anda untuk langkah selanjutnya
+                                </Text>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Email</Text>
-                            <View style={styles.iconInputContainer}>
-                                <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.iconInput}
-                                    placeholder="kelompok123@gmail.com"
-                                    placeholderTextColor="#A0A0A0"
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                />
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Email</Text>
+                                    <View style={styles.iconInputContainer}>
+                                        <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.iconInput}
+                                            placeholder="Masukkan email"
+                                            placeholderTextColor="#A0A0A0"
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                            value={forgotEmail}
+                                            onChangeText={setForgotEmail}
+                                            onFocus={() => {
+                                                setFocusedField('forgotEmail');
+                                            }}
+                                            onBlur={() => setFocusedField(null)}
+                                        />
+                                    </View>
+                                </View>
+                                {!isDesktop && <View style={{ flex: 1 }} />}
+                                <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleSendOTP}>
+                                    <Text style={styles.loginButtonText}>Kirim Kode OTP</Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
-                        <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleSendOTP}>
-                            <Text style={styles.loginButtonText}>Kirim Kode OTP</Text>
-                        </TouchableOpacity>
                     </View>
                 </SafeAreaView>
             </Animated.View>
@@ -327,66 +496,90 @@ const AuthScreen: React.FC<AuthScreenProps> = (props: AuthScreenProps) => {
                 ]}
             >
                 <SafeAreaView style={{ flex: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={handleCloseOTP} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#000" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Masukkan Kode OTP</Text>
-                        <View style={{ width: 40, marginLeft: 16 }} />
-                    </View>
-
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={styles.forgotPasswordContent}>
-                            <Text style={styles.forgotPasswordDesc}>
-                                Silakan periksa kotak masuk email Anda untuk melihat pesan dari Smartify. Masukkan kode verifikasi sekali pakai di bawah ini.
-                            </Text>
-
-                            <View style={styles.otpContainer}>
-                                {/* Hidden Main Input */}
-                                <TextInput
-                                    ref={inputRefs[0] as any}
-                                    style={styles.hiddenInput}
-                                    keyboardType="number-pad"
-                                    maxLength={6}
-                                    value={otpCode}
-                                    onChangeText={handleOtpChange}
-                                    selection={otpSelection}
-                                    onSelectionChange={(e) => setOtpSelection(e.nativeEvent.selection)}
-                                />
-
-                                {/* 6 Visual Boxes */}
-                                {[0, 1, 2, 3, 4, 5].map((index) => {
-                                    const isFocused = otpSelection.start === index;
-                                    const char = otpCode[index] || '';
-                                    return (
-                                        <TouchableOpacity
-                                            key={index}
-                                            activeOpacity={0.7}
-                                            onPress={() => {
-                                                setOtpSelection({ start: index, end: index });
-                                                inputRefs[0].current?.focus();
-                                            }}
-                                            style={[
-                                                styles.otpBox,
-                                                isFocused && styles.otpBoxFocused,
-                                                char !== '' && styles.otpBoxFilled
-                                            ]}
-                                        >
-                                            <Text style={styles.otpText}>{char}</Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
+                    <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
+                        {isDesktop && (
+                            <View style={styles.desktopLeftPanel}>
+                                <View style={styles.desktopBranding}>
+                                    <View style={styles.desktopIconBg}>
+                                        <Ionicons name="chatbubble-ellipses" size={60} color="#fff" />
+                                    </View>
+                                    <Text style={styles.desktopBrandName}>Verifikasi</Text>
+                                    <Text style={styles.desktopBrandTagline}>Masukkan kode yang kami kirim{'\n'}untuk memverifikasi identitas Anda</Text>
+                                </View>
+                                <View style={styles.desktopDecorCircle} />
+                            </View>
+                        )}
+                        <View style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-start' }}>
+                            <View style={[styles.header, isDesktop && { borderBottomWidth: 0, paddingHorizontal: 40 }]}>
+                                <TouchableOpacity onPress={handleCloseOTP} style={styles.backButton}>
+                                    <Ionicons name="arrow-back" size={24} color="#000" />
+                                </TouchableOpacity>
+                                <Text style={styles.headerTitle}>Masukkan Kode OTP</Text>
+                                <View style={{ width: 40, marginLeft: 16 }} />
                             </View>
 
-                            <Text style={styles.timerText}>
-                                Anda dapat mengirim ulang kode dalam <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>56</Text> detik
-                            </Text>
+                            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                                <View style={[
+                                    styles.forgotPasswordContent,
+                                    isDesktop && {
+                                        maxWidth: 500,
+                                        alignSelf: 'center',
+                                        width: '100%',
+                                        paddingHorizontal: 40
+                                    }
+                                ]}>
+                                    <Text style={[styles.forgotPasswordDesc, isDesktop && { textAlign: 'left', fontSize: 16 }]}>
+                                        Silakan periksa kotak masuk email Anda untuk melihat pesan dari Smartify. Masukkan kode verifikasi sekali pakai di bawah ini.
+                                    </Text>
 
-                            <TouchableOpacity>
-                                <Text style={styles.resendLink}>Kirim ulang kode</Text>
-                            </TouchableOpacity>
+                                    <View style={styles.otpContainer}>
+                                        {/* Hidden Main Input */}
+                                        <TextInput
+                                            ref={inputRefs[0] as any}
+                                            style={styles.hiddenInput}
+                                            keyboardType="number-pad"
+                                            maxLength={6}
+                                            value={otpCode}
+                                            onChangeText={handleOtpChange}
+                                            selection={otpSelection}
+                                            onSelectionChange={(e) => setOtpSelection(e.nativeEvent.selection)}
+                                        />
+
+                                        {/* 6 Visual Boxes */}
+                                        {[0, 1, 2, 3, 4, 5].map((index) => {
+                                            const isFocused = otpSelection.start === index;
+                                            const char = otpCode[index] || '';
+                                            return (
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    activeOpacity={0.7}
+                                                    onPress={() => {
+                                                        setOtpSelection({ start: index, end: index });
+                                                        inputRefs[0].current?.focus();
+                                                    }}
+                                                    style={[
+                                                        styles.otpBox,
+                                                        isFocused && styles.otpBoxFocused,
+                                                        char !== '' && styles.otpBoxFilled
+                                                    ]}
+                                                >
+                                                    <Text style={styles.otpText}>{char}</Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+
+                                    <Text style={styles.timerText}>
+                                        Waktu tersisa: <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>{Math.floor((otpTimer || 0) / 60)}:{(otpTimer || 0) % 60 < 10 ? `0${(otpTimer || 0) % 60}` : (otpTimer || 0) % 60}</Text>
+                                    </Text>
+
+                                    <TouchableOpacity>
+                                        <Text style={styles.resendLink}>Kirim ulang kode</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
                         </View>
-                    </TouchableWithoutFeedback>
+                    </View>
                 </SafeAreaView>
             </Animated.View>
 
@@ -402,53 +595,89 @@ const AuthScreen: React.FC<AuthScreenProps> = (props: AuthScreenProps) => {
                 ]}
             >
                 <SafeAreaView style={{ flex: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={handleCloseResetPassword} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#000" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Amankan Akun Anda</Text>
-                        <View style={{ width: 40, marginLeft: 16 }} />
-                    </View>
-
-                    <View style={styles.forgotPasswordContent}>
-                        <Text style={styles.forgotPasswordDesc}>
-                            Hampir selesai! Buat kata sandi baru untuk akun Smartify Anda agar tetap aman. Ingatlah untuk memilih kata sandi yang kuat dan unik.
-                        </Text>
-
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Kata Sandi Baru</Text>
-                            <View style={styles.iconInputContainer}>
-                                <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.iconInput}
-                                    placeholder="**********"
-                                    placeholderTextColor="#A0A0A0"
-                                    secureTextEntry={true}
-                                />
-                                <Ionicons name="eye-off-outline" size={20} color="#A0A0A0" />
+                    <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
+                        {isDesktop && (
+                            <View style={styles.desktopLeftPanel}>
+                                <View style={styles.desktopBranding}>
+                                    <View style={styles.desktopIconBg}>
+                                        <Ionicons name="shield-checkmark" size={60} color="#fff" />
+                                    </View>
+                                    <Text style={styles.desktopBrandName}>Keamanan</Text>
+                                    <Text style={styles.desktopBrandTagline}>Lindungi akun Anda dengan{'\n'}kata sandi baru yang kuat</Text>
+                                </View>
+                                <View style={styles.desktopDecorCircle} />
                             </View>
-                            <Text style={styles.helperText}>Panjangnya minimal 8 karakter!</Text>
-                        </View>
-
-                        <View style={[styles.inputContainer, { marginTop: 16 }]}>
-                            <Text style={styles.inputLabel}>Konfirmasi Kata Sandi Baru</Text>
-                            <View style={styles.iconInputContainer}>
-                                <Ionicons name="person-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.iconInput}
-                                    placeholder="**********"
-                                    placeholderTextColor="#A0A0A0"
-                                    secureTextEntry={true}
-                                />
-                                <Ionicons name="eye-off-outline" size={20} color="#A0A0A0" />
+                        )}
+                        <View style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-start' }}>
+                            <View style={[styles.header, isDesktop && { borderBottomWidth: 0, paddingHorizontal: 40 }]}>
+                                <TouchableOpacity onPress={handleCloseResetPassword} style={styles.backButton}>
+                                    <Ionicons name="arrow-back" size={24} color="#000" />
+                                </TouchableOpacity>
+                                <Text style={styles.headerTitle}>Amankan Akun Anda</Text>
+                                <View style={{ width: 40, marginLeft: 16 }} />
                             </View>
-                            <Text style={styles.helperText}>Panjangnya minimal 8 karakter!</Text>
-                        </View>
 
-                        <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleSaveNewPassword}>
-                            <Text style={styles.loginButtonText}>Simpan Kata Sandi Baru</Text>
-                        </TouchableOpacity>
+                            <View style={[
+                                styles.forgotPasswordContent,
+                                isDesktop && {
+                                    maxWidth: 500,
+                                    alignSelf: 'center',
+                                    width: '100%',
+                                    paddingHorizontal: 40
+                                }
+                            ]}>
+                                <Text style={[styles.forgotPasswordDesc, isDesktop && { textAlign: 'left', fontSize: 16 }]}>
+                                    Hampir selesai! Buat kata sandi baru untuk akun Smartify Anda agar tetap aman. Ingatlah untuk memilih kata sandi yang kuat dan unik.
+                                </Text>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Kata Sandi Baru</Text>
+                                    <View style={styles.iconInputContainer}>
+                                        <Ionicons name="lock-closed-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.iconInput}
+                                            placeholder={focusedField === 'newPassword' ? '' : '**********'}
+                                            placeholderTextColor="#A0A0A0"
+                                            secureTextEntry={true}
+                                            value={newPass}
+                                            onChangeText={setNewPass}
+                                            onFocus={() => {
+                                                setFocusedField('newPassword');
+                                            }}
+                                            onBlur={() => setFocusedField(null)}
+                                        />
+                                        <Ionicons name="eye-off-outline" size={20} color="#A0A0A0" />
+                                    </View>
+                                    <Text style={styles.helperText}>Panjangnya minimal 8 karakter!</Text>
+                                </View>
+
+                                <View style={[styles.inputContainer, { marginTop: 16 }]}>
+                                    <Text style={styles.inputLabel}>Konfirmasi Kata Sandi Baru</Text>
+                                    <View style={styles.iconInputContainer}>
+                                        <Ionicons name="lock-closed-outline" size={20} color="#A0A0A0" style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.iconInput}
+                                            placeholder={focusedField === 'confirmPassword' ? '' : '**********'}
+                                            placeholderTextColor="#A0A0A0"
+                                            secureTextEntry={true}
+                                            value={confirmNewPass}
+                                            onChangeText={setConfirmNewPass}
+                                            onFocus={() => {
+                                                setFocusedField('confirmPassword');
+                                            }}
+                                            onBlur={() => setFocusedField(null)}
+                                        />
+                                        <Ionicons name="eye-off-outline" size={20} color="#A0A0A0" />
+                                    </View>
+                                    <Text style={styles.helperText}>Panjangnya minimal 8 karakter!</Text>
+                                </View>
+
+                                {!isDesktop && <View style={{ flex: 1 }} />}
+                                <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleSaveNewPassword}>
+                                    <Text style={styles.loginButtonText}>Simpan Kata Sandi Baru</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </View>
                 </SafeAreaView>
             </Animated.View>
@@ -467,17 +696,23 @@ const AuthScreen: React.FC<AuthScreenProps> = (props: AuthScreenProps) => {
                 ]}
             >
                 <SafeAreaView style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, width: '100%' }}>
+                    <View style={[
+                        { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, width: '100%' },
+                        isDesktop && { maxWidth: 500, alignSelf: 'center' }
+                    ]}>
                         <View style={styles.successIcon}>
                             <Ionicons name="checkmark" size={50} color="#fff" />
                         </View>
                         <Text style={styles.successTitle}>Anda Sudah Siap!</Text>
-                        <Text style={styles.successSubtitle}>Kata sandi Anda telah berhasil diubah</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 24, width: '100%', paddingBottom: 0 }}>
-                        <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleCloseSuccessScreen}>
-                            <Text style={styles.loginButtonText}>{isProfileFlow ? 'Selesai' : 'Buka Beranda'}</Text>
-                        </TouchableOpacity>
+                        <Text style={[styles.successSubtitle, isDesktop && { fontSize: 18, lineHeight: 26 }]}>
+                            Kata sandi Anda telah berhasil diubah
+                        </Text>
+
+                        <View style={{ width: '100%', marginTop: 40 }}>
+                            <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleCloseSuccessScreen}>
+                                <Text style={styles.loginButtonText}>{isProfileFlow ? 'Selesai' : 'Buka Beranda'}</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </SafeAreaView>
             </Animated.View>
@@ -490,6 +725,53 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: '#fff',
     },
+    desktopLeftPanel: {
+        flex: 1,
+        backgroundColor: '#4285F4',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    desktopBranding: {
+        alignItems: 'center',
+        zIndex: 2,
+    },
+    desktopLogo: {
+        width: 150,
+        height: 150,
+        marginBottom: 24,
+    },
+    desktopBrandName: {
+        fontSize: 48,
+        fontWeight: '900',
+        color: '#fff',
+        letterSpacing: 2,
+        marginBottom: 12,
+    },
+    desktopBrandTagline: {
+        fontSize: 18,
+        color: 'rgba(255,255,255,0.8)',
+        textAlign: 'center',
+        lineHeight: 28,
+    },
+    desktopDecorCircle: {
+        position: 'absolute',
+        width: 400,
+        height: 400,
+        borderRadius: 200,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        top: -100,
+        right: -100,
+    },
+    desktopIconBg: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 30,
+    },
     scrollContent: {
         paddingHorizontal: 24,
         paddingBottom: 40,
@@ -500,8 +782,15 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     logo: {
-        width: 120,
-        height: 120,
+        width: 100,
+        height: 100,
+    },
+    logoText: {
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#4285F4',
+        marginTop: 12,
+        letterSpacing: 1,
     },
     loginTitle: {
         fontSize: 28,
@@ -563,6 +852,13 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         fontSize: 16,
         color: '#000',
+        backgroundColor: '#fff',
+        // @ts-ignore - Web specific
+        outlineStyle: 'none',
+    },
+    inputError: {
+        borderColor: '#EF4444',
+        borderWidth: 1.5,
     },
     passwordContainer: {
         flexDirection: 'row',
@@ -577,6 +873,9 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         fontSize: 16,
         color: '#000',
+        borderWidth: 0,
+        // @ts-ignore - Web specific
+        outlineStyle: 'none',
     },
     iconInputContainer: {
         flexDirection: 'row',
@@ -591,6 +890,9 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         fontSize: 16,
         color: '#000',
+        borderWidth: 0,
+        // @ts-ignore - Web specific
+        outlineStyle: 'none',
     },
     inputIcon: {
         marginRight: 12,
@@ -631,10 +933,14 @@ const styles = StyleSheet.create({
     },
     phoneInput: {
         flex: 1,
-        paddingHorizontal: 16,
+        paddingLeft: 2,
+        paddingRight: 16,
         paddingVertical: 14,
         fontSize: 16,
         color: '#000',
+        borderWidth: 0,
+        // @ts-ignore - Web specific
+        outlineStyle: 'none',
     },
     optionsRow: {
         flexDirection: 'row',
@@ -838,6 +1144,6 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center'
     }
-});
+} as any);
 
 export default React.memo(AuthScreen);

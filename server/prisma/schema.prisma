@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password       String
+  passwordLength Int           @default(8)
+  name           String
+  avatar       String?
+  phone        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  activities   ActivityLog[]
+  patients     Patient[] @relation("PatientRegistrar")
+}
+
+model Patient {
+  id           String        @id @default(uuid())
+  mrn          String        @unique // No. Rekam Medis
+  name         String
+  dob          String // Tanggal Lahir (string to match FE dd/mm/yyyy for now, or use DateTime)
+  gender       String // Laki-laki / Perempuan
+  category     String // Rawat Jalan / Rawat Inap / IGD
+  room         String?
+  userId       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  activityLogs ActivityLog[]
+  registeredBy User? @relation("PatientRegistrar", fields: [userId], references: [id])
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  patientId   String?
+  type        String // SCAN / MANUAL / REGISTER
+  description String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
+}
+
+model OTP {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  context   String // RESET_PASSWORD / UPDATE_EMAIL
+  createdAt DateTime @default(now())
+}

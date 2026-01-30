@@ -1,262 +1,417 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     TextInput,
-    ScrollView,
-    Animated,
     Dimensions,
-    Platform,
+    Animated,
+    Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../styles/theme';
-import AppHeader from './AppHeader';
+import * as ImagePicker from 'expo-image-picker';
+import { Alert, ActivityIndicator } from 'react-native';
+import { BASE_URL } from '../constants/config';
 
 const { width, height } = Dimensions.get('window');
 
 interface EditProfileScreenProps {
-    isVisible: boolean;
-    opacity: Animated.Value;
+    visible: boolean;
+    animation: Animated.Value;
     onClose: () => void;
-    onSave: () => void;
+    user: any;
+    onSave: (updatedData: any) => Promise<void>;
 }
 
 const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
-    isVisible,
-    opacity,
+    visible,
+    animation,
     onClose,
-    onSave,
+    user,
+    onSave
 }) => {
+    const [name, setName] = useState(user?.name || '');
+    const [phone, setPhone] = useState(user?.phone || '');
+    const [avatar, setAvatar] = useState(user?.avatar || '');
+    const [loading, setLoading] = useState(false);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
+
+    // Sync state when user prop changes
+    React.useEffect(() => {
+        if (user) {
+            setName(user.name || '');
+            setPhone(user.phone || '');
+            setAvatar(user.avatar || '');
+        }
+    }, [user]);
+
+    const handleImagePick = async () => {
+        Alert.alert(
+            'Ganti Foto Profil',
+            'Pilih sumber foto',
+            [
+                {
+                    text: 'Galeri',
+                    onPress: () => pickImage('gallery')
+                },
+                {
+                    text: 'Kamera',
+                    onPress: () => pickImage('camera')
+                },
+                {
+                    text: 'Batal',
+                    style: 'cancel'
+                }
+            ]
+        );
+    };
+
+    const pickImage = async (mode: 'gallery' | 'camera') => {
+        let result;
+        if (mode === 'gallery') {
+            result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.7,
+            });
+        } else {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Izin Ditolak', 'Izin kamera diperlukan untuk mengambil foto.');
+                return;
+            }
+            result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.7,
+            });
+        }
+
+        if (!result.canceled) {
+            uploadImage(result.assets[0].uri);
+        }
+    };
+
+    const uploadImage = async (uri: string) => {
+        setLoading(true);
+        const formData = new FormData();
+        const filename = uri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+        formData.append('image', {
+            uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+            name: filename,
+            type,
+        } as any);
+
+        try {
+            const response = await fetch(`${BASE_URL}/api/upload`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                // Ensure BASE_URL is prepended if the server returns a relative path
+                const newAvatarUrl = data.url.startsWith('http') ? data.url : `${BASE_URL}${data.url}`;
+                setAvatar(newAvatarUrl);
+            } else {
+                Alert.alert('Gagal', data.message || 'Gagal mengunggah foto');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            Alert.alert('Kesalahan', 'Terjadi kesalahan saat mengunggah foto');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            await onSave({ name, phone, avatar });
+            onClose();
+        } catch (error) {
+            console.error('Save profile error:', error);
+            Alert.alert('Gagal', 'Gagal menyimpan profil');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <Animated.View
-            renderToHardwareTextureAndroid={true}
+            pointerEvents={visible ? 'auto' : 'none'}
             style={[
-                styles.container,
-                {
-                    opacity: opacity,
-                    pointerEvents: isVisible ? 'auto' : 'none',
-                },
+                styles.overlay,
+                { opacity: animation }
             ]}
         >
-            <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-                <AppHeader
-                    title="Edit Profil"
-                    showBack
-                    onBack={onClose}
-                    align="center"
-                    containerStyle={{
-                        backgroundColor: '#fff',
-                        borderBottomWidth: 0,
-                        elevation: 0,
-                        shadowOpacity: 0
-                    }}
-                />
+            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backButton} onPress={onClose}>
+                        <Ionicons name="arrow-back" size={24} color="#1E293B" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Edit Profile</Text>
+                    <View style={styles.placeholder} />
+                </View>
 
-                <ScrollView
-                    style={styles.content}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 140 }}
-                >
-                    {/* Profile Photo */}
-                    <View style={styles.photoSection}>
-                        <View style={styles.photoContainer}>
+                <View style={styles.content}>
+                    {/* Avatar Section */}
+                    <View style={styles.avatarSection}>
+                        <View style={styles.avatarContainer}>
                             <Image
-                                source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
-                                style={styles.photo}
+                                source={{ uri: avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
+                                style={styles.avatar}
+                                contentFit="cover"
                             />
+                            {loading && (
+                                <View style={styles.avatarLoadingOverlay}>
+                                    <ActivityIndicator color="#fff" />
+                                </View>
+                            )}
                         </View>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={handleImagePick}>
                             <Text style={styles.changePhotoText}>Change Profile Photo</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Form Fields */}
-                    <View style={styles.form}>
-                        <InputLabel label="Nama Lengkap" />
-                        <TextInput style={styles.input} placeholder="Kelompok" defaultValue="Kelompok" />
-
-                        <InputLabel label="Nomor Telepon" />
-                        <View style={styles.phoneInputContainer}>
-                            <TouchableOpacity style={styles.countryCode}>
-                                <Image
-                                    source={{ uri: 'https://flagcdn.com/w40/id.png' }}
-                                    style={styles.flag}
-                                />
-                                <Ionicons name="chevron-down" size={14} color="#64748B" />
-                            </TouchableOpacity>
-                            <View style={styles.phoneDivider} />
+                    {/* Form Section */}
+                    <View style={styles.formContainer}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Nama Lengkap</Text>
                             <TextInput
-                                style={styles.phoneInput}
-                                placeholder="(+62) 8978936712"
-                                defaultValue="(+62) 8978936712"
-                                keyboardType="phone-pad"
+                                style={styles.input}
+                                value={name}
+                                onChangeText={setName}
+                                placeholder={focusedField === 'name' ? '' : "Nama Lengkap"}
+                                placeholderTextColor="#94A3B8"
+                                onFocus={() => {
+                                    setFocusedField('name');
+                                }}
+                                onBlur={() => setFocusedField(null)}
                             />
                         </View>
 
-                        <InputLabel label="Berat Badan" />
-                        <TextInput style={styles.input} placeholder="Masukan berat badan" />
-
-                        <InputLabel label="Tinggi Badan" />
-                        <TextInput style={styles.input} placeholder="Masukan tinggi badan" />
-
-                        <InputLabel label="Usia" />
-                        <TextInput style={styles.input} placeholder="Masukan usia" keyboardType="numeric" />
-
-                        <InputLabel label="Golongan Darah" />
-                        <TextInput style={styles.input} placeholder="Masukan golongan darah" />
-
-                        <InputLabel label="Target Kalori" />
-                        <TextInput style={styles.input} placeholder="Masukan target kalori" keyboardType="numeric" />
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Nomor Telepon</Text>
+                            <View style={styles.phoneInputContainer}>
+                                <View style={styles.countryCodeContainer}>
+                                    <Image
+                                        source={{ uri: 'https://flagcdn.com/w40/id.png' }}
+                                        style={styles.flag}
+                                    />
+                                    <Ionicons name="chevron-down" size={16} color="#64748B" />
+                                </View>
+                                <Text style={styles.countryCodeText}>(+62)</Text>
+                                <TextInput
+                                    style={styles.phoneInput}
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    keyboardType="phone-pad"
+                                    placeholder={focusedField === 'phone' ? '' : "8123456789"}
+                                    placeholderTextColor="#94A3B8"
+                                    onFocus={() => {
+                                        setFocusedField('phone');
+                                    }}
+                                    onBlur={() => setFocusedField(null)}
+                                />
+                            </View>
+                        </View>
                     </View>
-                </ScrollView>
+                </View>
 
+                {/* Footer Buttons */}
+                <View style={styles.footer}>
+                    <TouchableOpacity style={styles.buttonCancel} onPress={onClose} disabled={loading}>
+                        <Text style={styles.buttonCancelText}>Batal</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.buttonSave, loading && { opacity: 0.7 }]}
+                        onPress={handleSave}
+                        disabled={loading}
+                    >
+                        <Text style={styles.buttonSaveText}>{loading ? 'Menyimpan...' : 'Simpan'}</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
-
-            {/* Footer Buttons */}
-            <View style={styles.footer}>
-                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-                    <Text style={styles.cancelButtonText}>Batal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={onSave}>
-                    <Text style={styles.saveButtonText}>Simpan</Text>
-                </TouchableOpacity>
-            </View>
-        </Animated.View >
+        </Animated.View>
     );
 };
 
-const InputLabel = ({ label }: { label: string }) => (
-    <Text style={styles.label}>{label}</Text>
-);
-
 const styles = StyleSheet.create({
-    container: {
+    overlay: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         backgroundColor: '#fff',
-        zIndex: 1000,
+        zIndex: 100, // Ensure it's above everything
+    },
+    safeArea: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1E293B',
+    },
+    placeholder: {
+        width: 40,
     },
     content: {
         flex: 1,
+        paddingHorizontal: 24,
+        paddingTop: 20,
     },
-    photoSection: {
+    avatarSection: {
         alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 30,
+        marginBottom: 32,
     },
-    photoContainer: {
+    avatarContainer: {
         width: 100,
         height: 100,
-        borderRadius: 20,
-        overflow: 'hidden',
-        borderWidth: 4,
-        borderColor: '#3B82F6',
-        padding: 2,
-        backgroundColor: '#fff',
+        borderRadius: 24,
         marginBottom: 12,
+        borderWidth: 3,
+        borderColor: '#fff',
+        shadowColor: '#4285F4',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 5,
+        backgroundColor: '#fff',
+        padding: 4,
     },
-    photo: {
+    avatar: {
         width: '100%',
         height: '100%',
-        borderRadius: 16,
+        borderRadius: 20,
+    },
+    avatarLoadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     changePhotoText: {
+        color: '#4285F4',
         fontSize: 14,
-        color: '#3B82F6',
         fontWeight: '600',
         textDecorationLine: 'underline',
     },
-    form: {
-        paddingHorizontal: 20,
+    formContainer: {
+        gap: 20,
+    },
+    inputGroup: {
+        marginBottom: 4,
     },
     label: {
         fontSize: 14,
         color: '#64748B',
-        fontWeight: '500',
+        fontWeight: '600',
         marginBottom: 8,
-        marginTop: 16,
     },
     input: {
-        height: 56,
-        backgroundColor: '#fff',
+        height: 52,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 14,
+        fontSize: 16,
         color: '#1E293B',
+        backgroundColor: '#fff',
     },
     phoneInputContainer: {
+        height: 52,
         flexDirection: 'row',
         alignItems: 'center',
-        height: 56,
-        backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
         borderRadius: 12,
+        paddingHorizontal: 12,
+        backgroundColor: '#fff',
     },
-    countryCode: {
+    countryCodeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        gap: 8,
+        marginRight: 8,
+        paddingRight: 8,
     },
     flag: {
         width: 24,
         height: 16,
         borderRadius: 2,
+        marginRight: 4,
     },
-    phoneDivider: {
-        width: 1,
-        height: 30,
-        backgroundColor: '#F1F5F9',
+    countryCodeText: {
+        fontSize: 16,
+        color: '#64748B',
+        marginRight: 8,
     },
     phoneInput: {
         flex: 1,
-        paddingHorizontal: 16,
-        fontSize: 14,
+        fontSize: 16,
         color: '#1E293B',
     },
     footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        paddingVertical: 24,
+        paddingHorizontal: 24,
         flexDirection: 'row',
-        paddingHorizontal: 20,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        paddingTop: 16,
+        gap: 16,
         backgroundColor: '#fff',
-        gap: 12,
         borderTopWidth: 1,
         borderTopColor: '#F1F5F9',
     },
-    button: {
+    buttonCancel: {
         flex: 1,
-        height: 56,
+        height: 52,
+        backgroundColor: '#F1F5F9',
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    cancelButton: {
-        backgroundColor: '#60A5FA',
+    buttonSave: {
+        flex: 1,
+        height: 52,
+        backgroundColor: '#4285F4',
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    cancelButtonText: {
-        color: '#fff',
+    buttonCancelText: {
+        color: '#64748B',
         fontSize: 16,
         fontWeight: '700',
     },
-    saveButton: {
-        backgroundColor: '#60A5FA',
-    },
-    saveButtonText: {
+    buttonSaveText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '700',

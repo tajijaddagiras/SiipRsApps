@@ -1,17 +1,17 @@
 export const onboardingData = [
     {
-        image: require('../assets/images/onboarding_background.jpg'),
-        title: "Lacak Pola Makan Sehatmu",
-        subtitle: "Pantau asupan kalori, nutrisi, dan kadar gula darahmu dengan mudah. Dapatkan rekomendasi makanan personal setiap hari untuk menjaga stabilitas gula darah Anda."
+        image: require('../assets/images/onboarding_1.png'),
+        title: "Identifikasi Pasien Aman & Tepat",
+        subtitle: "SIIP-RS membantu rumah sakit memastikan ketepatan identitas pasien melalui sistem identifikasi berbasis SIMRS menggunakan barcode atau QR Code pada gelang pasien."
     },
     {
-        image: require('../assets/images/onboarding_background_2.png'),
-        title: "Temukan Rekomendasi Makanan Sehat",
-        subtitle: "Dapatkan berbagai pilihan menu makanan yang dikurasi khusus untuk kebutuhan dietmu. Nikmati beragam opsi hidangan rendah gula dan rendah karbohidrat yang tetap lezat dan aman untuk menjaga kadar gula darahmu tetap stabil."
+        image: require('../assets/images/onboarding_2.jpg'),
+        title: "Scan Gelang, Validasi Otomatis",
+        subtitle: "Dengan satu kali pemindaian gelang pasien, SIIP-RS mencocokkan data identitas secara real-time dengan SIMRS untuk mencegah kesalahan sebelum tindakan medis dilakukan."
     },
     {
-        image: require('../assets/images/onboarding_background_3.jpg'),
-        title: "Dapatkan Dukungan Komunitas",
-        subtitle: "Bergabunglah dengan komunitas pengguna 'DiabEats'. Berbagi tips, pengalaman, dan motivasi untuk menjalani gaya hidup yang lebih sehat bersama-sama."
+        image: require('../assets/images/onboarding_3.png'),
+        title: "Keselamatan Pasien Prioritas Utama",
+        subtitle: "Setiap tindakan medis tercatat lengkap dengan waktu, petugas, dan status validasi identitas, mendukung penerapan SKP 1 serta peningkatan mutu pelayanan rumah sakit."
     }
 ];
