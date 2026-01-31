@@ -126,7 +126,7 @@ const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 const uri = await captureRef(viewShotRef, {
                     format: 'png',
                     quality: 1,
-                    result: 'data-uri',
+                    result: 'tmpfile',
                 });
 
                 // Mobile Sharing Logic
